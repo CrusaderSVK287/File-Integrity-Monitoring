@@ -5,7 +5,7 @@ _config = {}
 def init(params):
     global _config
     _config = params.copy()
-    return {"status": "initialized"}
+    return {"status": "OK"}
 
 def run(params):
     data = _config.copy()
