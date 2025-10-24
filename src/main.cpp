@@ -1,4 +1,6 @@
 #include <ModuleManager.hpp>
+#include <SecurityManager.hpp>
+#include <Config.hpp>
 
 #include <pybind11/embed.h>
 #include <string>
@@ -80,7 +82,16 @@ int main(int argc, char **argv)
 {
     py::scoped_interpreter guard{};
 
-    _module_testing(argc, argv);
+    Config &cfg = Config::getInstance("config.yaml");
+    std::cout << "Configuration version: " << cfg.get<std::string>("version") << std::endl;
+
+    //_module_testing(argc, argv);
+
+    SecurityManager &sec = SecurityManager::getInstance();
+    if (sec.VerifyPassword())
+        std::cout << "OK";
+    else 
+        std::cout << "Bad pass";
 
     return 0;
 }

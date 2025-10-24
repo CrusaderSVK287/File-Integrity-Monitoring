@@ -22,10 +22,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/output/)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # -------------------------------------------------------------
-# Find Python and pybind11
+# Find Python and needed libraries
 # -------------------------------------------------------------
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG QUIET)
+find_package(yaml-cpp REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # -------------------------------------------------------------
 # Gather C++ sources and build executable
@@ -35,6 +37,8 @@ add_executable(monitor ${CPP_SOURCES})
 
 target_include_directories(monitor PRIVATE ${Python3_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(monitor PRIVATE ${Python3_LIBRARIES})
+target_link_libraries(monitor PRIVATE yaml-cpp)
+target_link_libraries(monitor PRIVATE OpenSSL::Crypto)
 # Link pybind11 embed if available (Dont uncomment, fucks shit up for some reason)
 #target_link_libraries(monitor PRIVATE pybind11::embed)
 
@@ -62,6 +66,11 @@ foreach(pyfile ${PYTHON_SCRIPTS})
         COMMENT "Copying ${pyfile} to output"
     )
 endforeach()
+add_custom_command(
+    TARGET monitor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/
+    COMMENT "Copying ${PROJECT_SOURCE_DIR}/config.yaml example configuration to ${CMAKE_SOURCE_DIR}/output/"
+)
 
 # -------------------------------------------------------------
 # Developer info

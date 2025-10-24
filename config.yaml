@@ -1,0 +1,19 @@
+# Example config
+version: 123.45
+
+database:
+  host: localhost
+  port: 5432
+  user: admin
+  password: secret
+  nested:
+    nestediem: value1
+    nesteditem: value2
+features:
+  logging: true
+  max_connections: 50
+users:
+  - alice
+  - bob
+  - charlie
+
