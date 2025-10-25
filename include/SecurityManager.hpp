@@ -10,6 +10,7 @@ public:
     SecurityManager& operator=(const SecurityManager&) = delete;
 
     static SecurityManager& getInstance();
+	static bool IsAdministrator();
 
     bool VerifyPassword();
     bool VerifyPassword(std::string password);
@@ -20,6 +21,6 @@ private:
     bool GenerateNewPasswordUserInput();
 
 private:
-    // TODO: portability and change to something normal
-    const std::string m_sPwdFilePath = "/tmp/.password";
+	// TODO: portability and change to something normal
+	std::string m_sPwdFilePath = "%LOCALAPPDATA%\\Monitor\\pwd.yaml";
 };

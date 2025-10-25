@@ -39,6 +39,11 @@ target_include_directories(monitor PRIVATE ${Python3_INCLUDE_DIRS} ${PROJECT_SOU
 target_link_libraries(monitor PRIVATE ${Python3_LIBRARIES})
 target_link_libraries(monitor PRIVATE yaml-cpp)
 target_link_libraries(monitor PRIVATE OpenSSL::Crypto)
+
+if(WIN32)
+    target_link_libraries(monitor PRIVATE Shell32)
+endif()
+
 # Link pybind11 embed if available (Dont uncomment, fucks shit up for some reason)
 #target_link_libraries(monitor PRIVATE pybind11::embed)
 
@@ -59,18 +64,36 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/output)
 # -------------------------------------------------------------
 find_program(PYTHON_EXECUTABLE python3 REQUIRED)
 file(GLOB PYTHON_SCRIPTS ${PROJECT_SOURCE_DIR}/python/*.py)
+
 foreach(pyfile ${PYTHON_SCRIPTS})
+    if(WIN32)
+        add_custom_command(
+            TARGET monitor POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${pyfile} ${CMAKE_SOURCE_DIR}/output/Release
+            COMMENT "Copying ${pyfile} to output/Release"
+        )
+    elseif(UNIX)
+        add_custom_command(
+            TARGET monitor POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${pyfile} ${CMAKE_SOURCE_DIR}/output/
+            COMMENT "Copying ${pyfile} to output/"
+        )
+    endif()
+endforeach()
+
+if(WIN32)
     add_custom_command(
         TARGET monitor POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${pyfile} ${CMAKE_SOURCE_DIR}/output/
-        COMMENT "Copying ${pyfile} to output"
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/Release/
+        COMMENT "Copying config.yaml to output/Release"
     )
-endforeach()
-add_custom_command(
-    TARGET monitor POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/
-    COMMENT "Copying ${PROJECT_SOURCE_DIR}/config.yaml example configuration to ${CMAKE_SOURCE_DIR}/output/"
-)
+elseif(UNIX)
+    add_custom_command(
+        TARGET monitor POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/
+        COMMENT "Copying config.yaml to output/"
+    )
+endif()
 
 # -------------------------------------------------------------
 # Developer info

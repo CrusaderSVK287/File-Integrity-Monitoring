@@ -11,9 +11,11 @@
 #include <iostream>
 #include <string>
 
-
 #ifdef _WIN32
+#define _WIN32_WINNT 0x0501
 #include <windows.h>
+#include <shlobj.h>
+
 void  SetStdinEcho(bool enable) {
     HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE); 
     DWORD mode;
@@ -22,7 +24,18 @@ void  SetStdinEcho(bool enable) {
     else mode |= ENABLE_ECHO_INPUT;
     SetConsoleMode(hStdin, mode);
 }
-#else
+
+std::string getPwdFilePath() {
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
+        std::string dir = std::string(path) + "\\Monitor";
+        CreateDirectoryA(dir.c_str(), NULL);
+        return dir + "\\pwd.yaml";
+    }
+    return "pwd.yaml";
+}
+
+#else /* ifdef _WIN32 */
 #include <termios.h>
 #include <unistd.h>
 void SetStdinEcho(bool enable) {
@@ -34,7 +47,47 @@ void SetStdinEcho(bool enable) {
         tty.c_lflag |= ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 }
+
+std::string getPwdFilePath() {
+	return "/tmp/pwd.yaml";
+}
+#endif /* ifdef _WIN32 */
+
+// static
+bool SecurityManager::IsAdministrator()
+{
+#ifdef WIN32
+    // code from https://vimalshekar.github.io/codesamples/Checking-If-Admin
+
+    BOOL fIsElevated = FALSE;
+    HANDLE hToken = NULL;
+    TOKEN_ELEVATION elevation;
+    DWORD dwSize;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+    {
+        goto Cleanup;  // if Failed, we treat as False
+    }
+
+
+    if (!GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize))
+    {        goto Cleanup;// if Failed, we treat as False
+    }
+
+    fIsElevated = elevation.TokenIsElevated;
+
+Cleanup:
+    if (hToken)
+    {
+        CloseHandle(hToken);
+        hToken = NULL;
+    }
+    return fIsElevated; 
+#else
+    return geteuid() == 0;
 #endif
+
+}
 
 SecurityManager& SecurityManager::getInstance() {
     static SecurityManager instance;
@@ -42,6 +95,7 @@ SecurityManager& SecurityManager::getInstance() {
 }
 
 SecurityManager::SecurityManager() {
+	m_sPwdFilePath = getPwdFilePath();
 }
 
 bool SecurityManager::VerifyPassword()
@@ -91,6 +145,12 @@ bool SecurityManager::GenerateNewPasswordUserInput()
     if (input.length() == 0 || std::toupper(input[0]) != 'Y') {
         return false;
     }
+
+	if (!SecurityManager::IsAdministrator()) {
+        std::cerr << "You need to have administrator/root priviledges to be able to set new password" << std::endl;
+        return false;
+    }
+	
     std::cout << "Enter new password: ";
     SetStdinEcho(false);
     std::getline(std::cin, input);
@@ -115,8 +175,9 @@ bool SecurityManager::GenerateNewPasswordUserInput()
     yaml["users"]["admin"]["salt"] = PBKDF2Util::ToHex(salt.data(), salt.size());
     yaml["users"]["admin"]["dk"] = PBKDF2Util::ToHex(dk.data(), dk.size());
     yaml["users"]["admin"]["iterations"] = iterations;
-    
-    std::ofstream fout(m_sPwdFilePath);
+
+	std::cout << getPwdFilePath() << std::endl;
+    std::ofstream fout(getPwdFilePath());
     fout << yaml;
 
     return true;
