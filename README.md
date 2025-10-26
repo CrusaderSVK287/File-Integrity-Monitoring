@@ -83,6 +83,8 @@ Podarilo sa mi spojazdniť kompiláciu na windowse, tu je postup.
    
 **Python 3.12**
 	* Presne musí byť 3.12, [link](https://www.python.org/downloads/windows/)
+	* nezabudnut zakliknut ze chcem pridat python do PATH
+	* Pri inštalácii treba dať edit/modify -> next -> zakliknúť download debugging symbols a download debug binaries
 	
 ** Git for windows **
 
