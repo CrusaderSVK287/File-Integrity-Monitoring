@@ -1,5 +1,6 @@
 #include <SecurityManager.hpp>
 #include <CryptoUtil.hpp>
+#include <log.hpp>
 
 #include <cctype>
 #include <cstdint>
@@ -121,15 +122,15 @@ bool SecurityManager::VerifyPassword(std::string password)
 
         return PBKDF2Util::VerifyPassword(password, salt, dk, iterations);
     }catch (const YAML::BadFile &e) {
-        std::cerr << "The file containing the passowrd does not exist" << std::endl;
+        logging::err("YAML: The file containing the passowrd does not exist");
         return GenerateNewPasswordUserInput();
     }
     catch (const YAML::ParserException &e) {
-        std::cerr << "The file containing the password is corrupted" << std::endl;
+        logging::err("YAML: The file containing the password is corrupted");
         return GenerateNewPasswordUserInput();
     }
     catch (const std::exception &e) {
-        std::cerr << "Unexpected error: " << e.what() << std::endl;
+        logging::err(e.what());
         return false;
     }
     // just in case
@@ -150,6 +151,8 @@ bool SecurityManager::GenerateNewPasswordUserInput()
         std::cerr << "You need to have administrator/root priviledges to be able to set new password" << std::endl;
         return false;
     }
+
+    logging::warn("Password Change in progress");
 	
     std::cout << "Enter new password: ";
     SetStdinEcho(false);
@@ -179,6 +182,8 @@ bool SecurityManager::GenerateNewPasswordUserInput()
 	std::cout << getPwdFilePath() << std::endl;
     std::ofstream fout(getPwdFilePath());
     fout << yaml;
+
+    logging::warn("Password has been changed, please verify that this action is ok");
 
     return true;
 }

@@ -1,4 +1,5 @@
 #include <CryptoUtil.hpp>
+#include <log.hpp>
 #include <openssl/evp.h>
 #include <iomanip>
 #include <iostream>
@@ -7,6 +8,8 @@
 
 std::string SHA256Util::sha256(const std::string& input)
 {
+    logging::info("Running sha256 calculation");
+
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx)
         throw std::runtime_error("Failed to create EVP_MD_CTX");
@@ -72,6 +75,7 @@ std::vector<unsigned char> PBKDF2Util::FromHex(const std::string& hex)
 
 std::vector<unsigned char> PBKDF2Util::GenerateSalt(size_t length)
 {
+    logging::info("Generating salt");
     if (length == 0)
         throw std::invalid_argument("Salt length must be > 0");
 
@@ -87,6 +91,7 @@ std::vector<unsigned char> PBKDF2Util::DeriveKey(const std::string& password,
                                                         int iterations,
                                                         size_t dk_len)
 {
+    logging::info("Deriving key");
     if (iterations <= 0)
         throw std::invalid_argument("Iterations must be > 0");
     if (dk_len == 0)
@@ -113,6 +118,7 @@ bool PBKDF2Util::VerifyPassword(const std::string& password,
                                        const std::vector<unsigned char>& stored_dk,
                                        int iterations)
 {
+    logging::info("Verifing password");
     std::vector<unsigned char> dk = DeriveKey(password, salt, iterations, stored_dk.size());
     return CRYPTO_memcmp(dk.data(), stored_dk.data(), dk.size()) == 0;
 }

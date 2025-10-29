@@ -32,7 +32,7 @@ Výsledok bude v /output
 
 # Testovanie modulov.
 Urobil som nahrubo v main funkcii iba kus kódu ktory loadne a spustí nejaký modul nech sa dá už testovať.
-Po kompilácii stačí zapnúťv /output binárku takto:
+Po kompilácii stačí zapnúť v /output binárku takto:
 `./monitor --module <moduleName> <initKey1> <initValue1> ... - <runKey1> <runValue2> ...`
 tá - tam musí byť. Ak dáte key ale nedáte za tým value *malo* by ten key ignorovať. Vzorový output:
 ```
@@ -68,6 +68,12 @@ At:
 
 }
 ```
+Ak vás budú srať tie logy (neni ich tam veľa ale vo vzorovom outpute ich nevidno), 
+tak otvorte src/main.cpp, a na začiatku main funkcie (úplne dole v subore) 
+zmente `logging::LogVerbosity::highest` na `logging::LogVerbosity::highest`. 
+Errory a warningy sa budu stale zobrazovat ale nebude vidno kazdu kravinu.
+
+Aktualne su errory pre linux v /tmp/monitor.log a pre windows by mal byť v /Users/<username>/appdata/Local/Monitor/monitor.log
 
 PS: ak budete pozerať C++ kód tak často tam nadávam v komentároch na kompilátor, nemažte mi to pls, je to pre mňa terapia :D
 
