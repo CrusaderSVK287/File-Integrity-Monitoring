@@ -1,4 +1,6 @@
+#include "log.hpp"
 #include <ModuleManager.hpp>
+#include <log.hpp>
 
 #include <pybind11/embed.h>
 #include <iostream>
@@ -10,17 +12,17 @@ namespace py = pybind11;
 
 bool ModuleManager::LoadModule(const std::string &name, const py::dict &params)
 {
+    logging::msg("Loading python module - " + name);
+
     auto module = std::make_unique<Module>(name);
 
     try {
         module->m_oModule = py::module::import(name.c_str());
     } catch (const py::error_already_set& e) {
-        std::cerr << "Failed to import Python module '" << name << "':\n"
-                  << e.what() << std::endl;
+        logging::err("[Pyerror] Failed to import Python module '" + name + "': " + e.what());
         return false;
     } catch (const std::exception& e) {
-        std::cerr << "[ModuleManager] Unexpected exception while importing '"
-                  << name << "': " << e.what() << std::endl;
+        logging::err("[ModuleManager] Unexpected exception while importing '" + name + "': " + e.what());
         return false;
     }
 
@@ -28,19 +30,19 @@ bool ModuleManager::LoadModule(const std::string &name, const py::dict &params)
     py::dict init_result = module->Run("init", params);
     std::string status = init_result["status"].cast<std::string>();
     if (status.compare("OK")) {
-        std::cerr << "Error loading module " << name << ":\n" << status << std::endl;
+        logging::err("Error loading module " + name + ": " + status);
         return false;
     }
 
     m_mModules.emplace(name, std::move(module));
 
-    // TODO: add logger
-    std::cout << "[ModuleManager] Successfully loaded module '" << name << "'.\n";
+    logging::msg("[ModuleManager] Successfully loaded python module " + name + ". Return value: " + status);
     return true;
 }
 
 py::dict ModuleManager::RunModule(const std::string &name, const py::dict &params)
 {
+    logging::msg("[ModuleManager] Running python module " + name);
     auto it = m_mModules.find(name);
     if (it == m_mModules.end()) {
         throw std::runtime_error("Module '" + name + "' not found, cannot run");

@@ -1,8 +1,13 @@
 #include <ModuleManager.hpp>
+#include <SecurityManager.hpp>
+#include <Config.hpp>
+#include <log.hpp>
 
+#include <cstring>
 #include <pybind11/embed.h>
 #include <string>
 #include <iostream>
+
 
 namespace py = pybind11;
 
@@ -20,14 +25,14 @@ namespace py = pybind11;
 //  ....
 static void _module_testing(int argc, char **argv)
 {
-    const std::string moduleName = argv[1];
+    const std::string moduleName = argv[2];
 
     py::dict initArgs;
     py::dict runArgs;
 
     bool parsingInit = true;
 
-    for (int i = 2; i < argc; i += 2) {
+    for (int i = 3; i < argc; i += 2) {
         const std::string current = argv[i];
 
         if (current == "-") {
@@ -78,9 +83,29 @@ static void _module_testing(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    py::scoped_interpreter guard{};
+    // TODO: add config
+    logging::init(logging::LogVerbosity::highest);
+    logging::info("Logger initialised");
 
-    _module_testing(argc, argv);
+    py::scoped_interpreter guard{};
+    logging::info("Python scoped interpreter pybind11 initialised");
+
+    /* For testing purposes only */
+    if (argc > 1 && !strcmp(argv[1], "--module")) {
+        logging::warn("[MODULE TESTER]: Running module tester. "
+                "Module will be loaded and run. Then the program will exit");
+        _module_testing(argc, argv);
+        return 100;
+    }
+
+    Config &cfg = Config::getInstance("config.yaml");
+    logging::msg("Configuration version: " + cfg.get<std::string>("version"));
+
+    SecurityManager &sec = SecurityManager::getInstance();
+    if (sec.VerifyPassword())
+        std::cout << "OK";
+    else 
+        std::cout << "Bad pass";
 
     return 0;
 }
