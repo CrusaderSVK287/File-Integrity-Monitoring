@@ -33,10 +33,10 @@ Výsledok bude v /output
 # Testovanie modulov.
 Urobil som nahrubo v main funkcii iba kus kódu ktory loadne a spustí nejaký modul nech sa dá už testovať.
 Po kompilácii stačí zapnúťv /output binárku takto:
-`./monitor <moduleName> <initKey1> <initValue1> ... - <runKey1> <runValue2> ...`
+`./monitor --module <moduleName> <initKey1> <initValue1> ... - <runKey1> <runValue2> ...`
 tá - tam musí byť. Ak dáte key ale nedáte za tým value *malo* by ten key ignorovať. Vzorový output:
 ```
-output git:main $ ./monitor mymodule name lukas - count 6
+output git:main $ ./monitor --module mymodule name lukas - count 6
 Module Name: mymodule
 Init Args: {'name': 'lukas'}
 Run Args: {'count': '6'}
@@ -52,7 +52,7 @@ Aby sa modul inicializoval tak MUSÍ vrátiť v dictionary {"status":"OK"}, OK m
 Pri run je to prakticky jedno tam sa žiadny return value nekontroluje, to sa už dohodneme keď tak.
 Ak python hodí nejaký exception mala by ho tá apka zachytiť takže kľudne hádžte keľo chcete, príklad kde som upravil ten script aby nemal žiadny config:
 ```
-output git:main $ ./monitor mymodule                                          ✖ ✹
+output git:main $ ./monitor --module mymodule                                          ✖ ✹
 Module Name: mymodule
 Init Args: {}
 Run Args: {}

@@ -2,6 +2,7 @@
 #include <SecurityManager.hpp>
 #include <Config.hpp>
 
+#include <cstring>
 #include <pybind11/embed.h>
 #include <string>
 #include <iostream>
@@ -22,14 +23,14 @@ namespace py = pybind11;
 //  ....
 static void _module_testing(int argc, char **argv)
 {
-    const std::string moduleName = argv[1];
+    const std::string moduleName = argv[2];
 
     py::dict initArgs;
     py::dict runArgs;
 
     bool parsingInit = true;
 
-    for (int i = 2; i < argc; i += 2) {
+    for (int i = 3; i < argc; i += 2) {
         const std::string current = argv[i];
 
         if (current == "-") {
@@ -82,10 +83,14 @@ int main(int argc, char **argv)
 {
     py::scoped_interpreter guard{};
 
+    /* For testing purposes only */
+    if (argc > 1 && !strcmp(argv[1], "--module")) {
+        _module_testing(argc, argv);
+        return 100;
+    }
+
     Config &cfg = Config::getInstance("config.yaml");
     std::cout << "Configuration version: " << cfg.get<std::string>("version") << std::endl;
-
-    //_module_testing(argc, argv);
 
     SecurityManager &sec = SecurityManager::getInstance();
     if (sec.VerifyPassword())
