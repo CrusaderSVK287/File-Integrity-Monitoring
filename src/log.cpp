@@ -21,12 +21,12 @@ namespace logging
     {
         verbosity = v;
 #ifdef _WIN32
-    char path[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
-        std::string dir = std::string(path) + "\\Monitor";
-        CreateDirectoryA(dir.c_str(), NULL);
-        return dir + "\\monitor.log";
-    }
+		char path[MAX_PATH];
+		if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
+			std::string dir = std::string(path) + "\\Monitor";
+			CreateDirectoryA(dir.c_str(), NULL);
+			filepath = dir + "\\monitor.log";
+		}
 #else
         filepath = "/tmp/monitor.log";
 #endif
