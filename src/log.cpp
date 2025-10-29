@@ -7,6 +7,11 @@
 #include <ctime>
 #include <iomanip>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#endif
+
 static std::string filepath = "";
 static logging::LogVerbosity verbosity = logging::LogVerbosity::normal;
 
