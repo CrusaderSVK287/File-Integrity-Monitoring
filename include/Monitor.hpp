@@ -1,0 +1,45 @@
+#pragma once
+
+#include <SecurityManager.hpp>
+#include <ModuleManager.hpp>
+#include <Config.hpp>
+#include <cstdint>
+#include <vector>
+
+using HashFunction = std::string (*)(const std::string&);
+
+class Monitor {
+    public:
+        Monitor() :
+            Security(SecurityManager::getInstance()),
+            Modules(ModuleManager()),
+            Cfg(Config::getInstance())
+        {}
+
+        bool Initialise();
+
+        // Main function of the program, will throw exception if anything weird happens.
+        // Should be restarted right away. Keep track of how many restarts and how often.
+        // If too many in too short of a time, raise an error, send email and stop program.
+        void StartMonitoring();
+
+    private:
+        bool InitialiseModules(); 
+        bool InitialiseConfig(); // for stuff like time period between checks etc
+        std::string ComputeHash(const std::string &s);    // Algorhitm agnostic method that calls m_hashAlgorhitm with algorhitm set up in config
+
+        int RunScan();
+
+    private:
+        // Managers
+        ModuleManager Modules;
+        SecurityManager &Security;
+        Config &Cfg;
+
+    private:
+        // Configs
+        uint64_t m_u64period = 0;               // Time period between each scans
+        std::vector<std::string> m_files;       // Filenames to be monitored
+        HashFunction m_hashAlgorhitm;           // Pointer to the function used for checksumming the files
+
+};

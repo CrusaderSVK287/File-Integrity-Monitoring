@@ -1,7 +1,8 @@
+#include <Monitor.hpp>
 #include <ModuleManager.hpp>
 #include <SecurityManager.hpp>
 #include <Config.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 
 #include <cstring>
 #include <pybind11/embed.h>
@@ -101,12 +102,20 @@ int main(int argc, char **argv)
     Config &cfg = Config::getInstance("config.yaml");
     logging::msg("Configuration version: " + cfg.get<std::string>("version"));
 
-    SecurityManager &sec = SecurityManager::getInstance();
+    /*SecurityManager &sec = SecurityManager::getInstance();
     if (sec.VerifyPassword())
         std::cout << "OK";
     else 
-        std::cout << "Bad pass";
+        std::cout << "Bad pass";*/
 
+    // TODO: startmonitoring will throw exceptions (check declaration), support that
+    Monitor monitor;
+    if (monitor.Initialise()) {
+        monitor.StartMonitoring();
+    }
+    
+
+    logging::msg("Exiting properly");
     return 0;
 }
 

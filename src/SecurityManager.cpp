@@ -1,6 +1,6 @@
 #include <SecurityManager.hpp>
 #include <CryptoUtil.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 
 #include <cctype>
 #include <cstdint>

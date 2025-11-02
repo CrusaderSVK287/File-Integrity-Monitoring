@@ -1,6 +1,5 @@
-#include "log.hpp"
 #include <ModuleManager.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 
 #include <pybind11/embed.h>
 #include <iostream>

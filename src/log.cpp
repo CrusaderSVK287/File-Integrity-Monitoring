@@ -1,4 +1,4 @@
-#include <log.hpp>
+#include <Log.hpp>
 #include <ostream>
 #include <stdexcept>
 #include <iostream>

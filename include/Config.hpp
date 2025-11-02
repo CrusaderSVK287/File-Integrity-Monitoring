@@ -16,9 +16,10 @@ public:
     static void __Dump() {std::cout << getInstance().config << std::endl;};
 
 private:
-    YAML::Node config;
+    const YAML::Node config;
 
-    explicit Config(const std::string& filename);
+    explicit Config(const std::string& filename) :
+        config(YAML::LoadFile(filename)) {};
 
     YAML::Node getNode(const std::string& keyPath) const;
 };

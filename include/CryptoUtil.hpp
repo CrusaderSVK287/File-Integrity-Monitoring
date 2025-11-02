@@ -7,10 +7,16 @@
 #include <string>
 #include <vector>
 
-class SHA256Util
+class SHAFileUtil
 {
     public:
-        static std::string sha256(const std::string &input);
+        static std::string SHA256(const std::string &filename);
+        static std::string SHA512(const std::string &filename);
+        static std::string Blake2s256(const std::string &filename);
+        static std::string Blake2s512(const std::string &filename);
+        static std::string SHA3_256(const std::string &filename);
+        static std::string SHA3_512(const std::string &filename);
+        static std::string SHA_Agnostic(const std::string &filename, const EVP_MD* a);
 };
 
 class PBKDF2Util {

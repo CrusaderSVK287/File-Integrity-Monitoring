@@ -1,38 +1,83 @@
 #include <CryptoUtil.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 #include <openssl/evp.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 
-std::string SHA256Util::sha256(const std::string& input)
+std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* algorithm)
 {
-    logging::info("Running sha256 calculation");
-
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx)
         throw std::runtime_error("Failed to create EVP_MD_CTX");
 
+    if (EVP_DigestInit_ex(ctx, algorithm, nullptr) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Digest initialization failed");
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+        throw std::runtime_error("Failed to open file: " + path);
+
+    std::vector<char> buffer(8192); // 8 KB chunks; adjust as needed
+    while (file.good()) {
+        file.read(buffer.data(), buffer.size());
+        std::streamsize bytesRead = file.gcount();
+        if (bytesRead > 0)
+            EVP_DigestUpdate(ctx, buffer.data(), bytesRead);
+    }
+
     unsigned char hash[EVP_MAX_MD_SIZE];
     unsigned int hash_len = 0;
 
-    if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) != 1 ||
-        EVP_DigestUpdate(ctx, input.data(), input.size()) != 1 ||
-        EVP_DigestFinal_ex(ctx, hash, &hash_len) != 1) {
+    if (EVP_DigestFinal_ex(ctx, hash, &hash_len) != 1) {
         EVP_MD_CTX_free(ctx);
-        throw std::runtime_error("SHA-256 computation failed using EVP API");
+        throw std::runtime_error("Digest finalization failed");
     }
 
     EVP_MD_CTX_free(ctx);
 
     std::ostringstream oss;
-    for (unsigned int i = 0; i < hash_len; ++i) {
-        oss << std::hex << std::setw(2) << std::setfill('0')
-            << static_cast<int>(hash[i]);
-    }
+    for (unsigned int i = 0; i < hash_len; ++i)
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
 
     return oss.str();
+}
+
+std::string SHAFileUtil::SHA256(const std::string& input)
+{
+    logging::info("Running sha256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha256());
+}
+
+std::string SHAFileUtil::SHA512(const std::string& input)
+{
+    logging::info("Running sha512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512());
+}
+std::string SHAFileUtil::Blake2s256(const std::string &input)
+{
+    logging::info("Running blake2s256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512());
+}
+std::string SHAFileUtil::Blake2s512(const std::string &input)
+{
+    logging::info("Running blake2s512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_blake2b512());
+}
+std::string SHAFileUtil::SHA3_256(const std::string& input)
+{
+    logging::info("Running sha256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_256());
+}
+
+std::string SHAFileUtil::SHA3_512(const std::string& input)
+{
+    logging::info("Running sha512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_512());
 }
 
 std::string PBKDF2Util::ToHex(const unsigned char* data, size_t len)
