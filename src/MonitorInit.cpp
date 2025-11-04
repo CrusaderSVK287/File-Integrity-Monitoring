@@ -4,6 +4,9 @@
 #include <Monitor.hpp>
 #include <Log.hpp>
 #include <memory>
+#include <ranges>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <yaml-cpp/node/parse.h>
 #include <Config.hpp>
@@ -41,6 +44,13 @@ bool Monitor::Initialise()
         return false;
     }
 
+    try {
+        InitialiseFilters();
+    } catch (const std::runtime_error &e) {
+        logging::err("Filter configuration is corrupted. Please review your configuration. The program will continue to run, but no filters will be used");
+        m_filters.clear();
+    }
+
     return true;
 }
 
@@ -53,6 +63,48 @@ bool Monitor::InitialiseModules()
     //result = result & Modules.LoadModule("_mailtest", _emptyParams);
 
     return result;
+}
+
+bool Monitor::InitialiseFilters()
+{
+    YAML::Node filterNode = Cfg.get<YAML::Node>("filter");
+
+    for (const auto& entry : filterNode) {
+        std::string filename = entry["file"].as<std::string>();
+        std::string linesCSV = entry["lines"].as<std::string>();
+
+        std::unordered_set<uint64_t> lines;
+        std::stringstream ss(linesCSV);
+        std::string token;
+
+        while (std::getline(ss, token, ',')) {
+            // handle line range X-Y
+            if (token.contains('-'))
+            {
+                uint64_t lower = 0, upper = 0;
+                char dash;
+
+                std::istringstream iss(token);
+                if (iss >> lower >> dash >> upper && dash == '-' && lower < upper) {
+                    // range string is valid
+                    lines.insert_range(std::views::iota(lower, upper + 1));
+                } else {
+                    // in case user is incapable of understanding child-like syntax
+                    logging::err("Invalid format for filter range [" + token + "]. Use correct format [lower-upper]");
+                    throw std::invalid_argument("");
+                }
+            }
+            // handle single line filter
+            else {
+                uint64_t line = std::stoull(token);
+                lines.insert(line);
+            }
+        }
+
+        m_filters[filename] = std::move(lines);
+    }
+
+    return true;
 }
 
 bool Monitor::InitialiseConfig()
@@ -76,6 +128,8 @@ bool Monitor::InitialiseConfig()
         m_hashAlgorhitm = &SHAFileUtil::SHA3_512;
     else
         throw std::invalid_argument("Unsupported hash algorithm: " + hashAlgo);
+
+    m_files = Cfg.get<std::vector<std::string>>("files");
 
     return true;
 }

@@ -1,12 +1,16 @@
 #pragma once
 
 #include <SecurityManager.hpp>
+#include <map>
+#include <pybind11/embed.h>
 #include <ModuleManager.hpp>
 #include <Config.hpp>
 #include <cstdint>
 #include <vector>
+#include <unordered_set>
 
-using HashFunction = std::string (*)(const std::string&);
+using FilterMap = std::map<std::string, std::unordered_set<uint64_t>>;
+using HashFunction = std::string (*)(const std::string& ,const FilterMap &filters);
 
 class Monitor {
     public:
@@ -26,9 +30,12 @@ class Monitor {
     private:
         bool InitialiseModules(); 
         bool InitialiseConfig(); // for stuff like time period between checks etc
+        bool InitialiseFilters();
         std::string ComputeHash(const std::string &s);    // Algorhitm agnostic method that calls m_hashAlgorhitm with algorhitm set up in config
 
         int RunScan();
+
+        py::dict QueryDatabase(const std::string &query);
 
     private:
         // Managers
@@ -41,5 +48,5 @@ class Monitor {
         uint64_t m_u64period = 0;               // Time period between each scans
         std::vector<std::string> m_files;       // Filenames to be monitored
         HashFunction m_hashAlgorhitm;           // Pointer to the function used for checksumming the files
-
+        FilterMap m_filters;
 };

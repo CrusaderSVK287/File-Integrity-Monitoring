@@ -91,7 +91,7 @@ namespace logging
         if (verbosity < LogVerbosity::highest)
             return false;
     
-        return _log("Log", s, verbosity >= LogVerbosity::highest);
+        return _log("Info", s, verbosity >= LogVerbosity::highest);
     }
     
 }

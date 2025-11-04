@@ -1,5 +1,6 @@
 #include <CryptoUtil.hpp>
 #include <Log.hpp>
+#include <cstdint>
 #include <openssl/evp.h>
 #include <iomanip>
 #include <iostream>
@@ -7,7 +8,7 @@
 #include <string>
 #include <fstream>
 
-std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* algorithm)
+std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* algorithm ,const FilterMap &filters)
 {
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx)
@@ -22,14 +23,27 @@ std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* alg
     if (!file)
         throw std::runtime_error("Failed to open file: " + path);
 
-    std::vector<char> buffer(8192); // 8 KB chunks; adjust as needed
-    while (file.good()) {
-        file.read(buffer.data(), buffer.size());
-        std::streamsize bytesRead = file.gcount();
-        if (bytesRead > 0)
-            EVP_DigestUpdate(ctx, buffer.data(), bytesRead);
-    }
+    uint64_t lineNumber = 0;
+    std::string line;
+    auto it = filters.find(path);
+    // just for logging purposes
+    if (it != filters.end()) 
+        logging::info("Filter for " + path + " found, skiping filtered lines");
 
+    while (std::getline(file, line)) {
+        ++lineNumber;
+
+
+        if (it != filters.end()) {
+            const auto& excludedLines = it->second;
+            if (excludedLines.contains(lineNumber))
+                continue; // Skip this line
+        }
+
+        // Include newline so the hash matches file structure
+        line.push_back('\n');
+        EVP_DigestUpdate(ctx, line.data(), line.size());
+    }
     unsigned char hash[EVP_MAX_MD_SIZE];
     unsigned int hash_len = 0;
 
@@ -47,37 +61,37 @@ std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* alg
     return oss.str();
 }
 
-std::string SHAFileUtil::SHA256(const std::string& input)
+std::string SHAFileUtil::SHA256(const std::string& input ,const FilterMap &filters)
 {
     logging::info("Running sha256 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_sha256());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha256(), filters);
 }
 
-std::string SHAFileUtil::SHA512(const std::string& input)
+std::string SHAFileUtil::SHA512(const std::string& input ,const FilterMap &filters)
 {
     logging::info("Running sha512 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512(), filters);
 }
-std::string SHAFileUtil::Blake2s256(const std::string &input)
+std::string SHAFileUtil::Blake2s256(const std::string &input ,const FilterMap &filters)
 {
     logging::info("Running blake2s256 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512(), filters);
 }
-std::string SHAFileUtil::Blake2s512(const std::string &input)
+std::string SHAFileUtil::Blake2s512(const std::string &input ,const FilterMap &filters)
 {
     logging::info("Running blake2s512 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_blake2b512());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_blake2b512(), filters);
 }
-std::string SHAFileUtil::SHA3_256(const std::string& input)
+std::string SHAFileUtil::SHA3_256(const std::string& input ,const FilterMap &filters)
 {
     logging::info("Running sha256 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_256());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_256(), filters);
 }
 
-std::string SHAFileUtil::SHA3_512(const std::string& input)
+std::string SHAFileUtil::SHA3_512(const std::string& input ,const FilterMap &filters)
 {
     logging::info("Running sha512 calculation");
-    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_512());
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_512(), filters);
 }
 
 std::string PBKDF2Util::ToHex(const unsigned char* data, size_t len)

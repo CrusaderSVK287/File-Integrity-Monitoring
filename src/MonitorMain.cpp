@@ -28,17 +28,36 @@ int Monitor::RunScan()
     //- Verify that the hashes are valid
     //    - If not, send a notify alert to the mailing manager
     //- Continue with next file until all files done
-    /*for (const std::string &file : m_files) {
-           
-    }*/
 
-    std::string hash = ComputeHash("index.html");
-    logging::msg(hash);
+    for (const std::string &file : m_files) {
+        // Compute a hash
+        std::string hashCompare = ComputeHash(file);
+        logging::msg(hashCompare);
+
+        // Retrieve a hash from database
+        // TODO: finish when database plugin ready, store hash as basiline if doesnt exist
+        py::dict result = QueryDatabase("SELECT hash FROM table WHERE key is whatever");
+        std::string hashBaseline = result["hash"].cast<std::string>();
+
+        if (hashCompare != hashBaseline) {
+            //TODO: call email plugin to raise alert
+            logging::warn("[Monitor] File " + file + " fingerprint does not match baseline, file may be compromised");
+        }
+    }
 
     return 0;
 }
 
 std::string Monitor::ComputeHash(const std::string &filename)
 {
-    return m_hashAlgorhitm(filename);
+    return m_hashAlgorhitm(filename, m_filters);
 }
+
+// TODO: implement when database module ready
+py::dict Monitor::QueryDatabase(const std::string &query)
+{
+    py::dict params;
+    params["query"] = query;
+    return Modules.RunModule("_dbtest", params);
+}
+

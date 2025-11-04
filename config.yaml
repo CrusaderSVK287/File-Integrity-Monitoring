@@ -1,9 +1,13 @@
 # Example config
-version: 123.45
+version: "123.45"
 
 monitor:
   period: 3
-  algorithm: sha256
+  algorithm: "sha256"
 
 files:
-  - index.html
+  - "index.html"
+
+filter:
+  - file: "index.html"
+    lines: "8,2-4"

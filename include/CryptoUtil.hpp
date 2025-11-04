@@ -1,22 +1,61 @@
 #pragma once
 
+#include <cstdint>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
 
 #include <string>
 #include <vector>
+#include <map>
+#include <unordered_set>
+
+using FilterMap = std::map<std::string, std::unordered_set<uint64_t>>;
 
 class SHAFileUtil
 {
-    public:
-        static std::string SHA256(const std::string &filename);
-        static std::string SHA512(const std::string &filename);
-        static std::string Blake2s256(const std::string &filename);
-        static std::string Blake2s512(const std::string &filename);
-        static std::string SHA3_256(const std::string &filename);
-        static std::string SHA3_512(const std::string &filename);
-        static std::string SHA_Agnostic(const std::string &filename, const EVP_MD* a);
+public:
+    static std::string SHA256(
+        const std::string &filename,
+        const FilterMap &filters);
+
+    static std::string SHA512(
+        const std::string &filename,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+    static std::string Blake2s256(
+        const std::string &filename,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+    static std::string Blake2s512(
+        const std::string &filename,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+    static std::string SHA3_256(
+        const std::string &filename,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+    static std::string SHA3_512(
+        const std::string &filename,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+    static std::string SHA_Agnostic(
+        const std::string &filename,
+        const EVP_MD *a,
+        const FilterMap &filters = GetEmptyFilterMap()
+    );
+
+private:
+    static const FilterMap& GetEmptyFilterMap()
+    {
+        static const FilterMap empty;
+        return empty;
+    };
 };
 
 class PBKDF2Util {
