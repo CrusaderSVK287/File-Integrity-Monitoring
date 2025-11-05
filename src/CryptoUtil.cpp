@@ -181,3 +181,20 @@ bool PBKDF2Util::VerifyPassword(const std::string& password,
     std::vector<unsigned char> dk = DeriveKey(password, salt, iterations, stored_dk.size());
     return CRYPTO_memcmp(dk.data(), stored_dk.data(), dk.size()) == 0;
 }
+
+std::vector<unsigned char> AESUtil::GenerateIV(size_t length = 12) {
+    if (length == 0) throw std::invalid_argument("IV length must be > 0");
+    std::vector<unsigned char> iv(length);
+    if (RAND_bytes(iv.data(), static_cast<int>(length)) != 1) {
+        throw std::runtime_error("RAND_bytes failed to generate IV");
+    }
+    return iv;
+}
+
+std::string AESUtil::ToHex(const std::vector<unsigned char>& data) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (unsigned char b : data)
+        oss << std::setw(2) << static_cast<int>(b);
+    return oss.str();
+}

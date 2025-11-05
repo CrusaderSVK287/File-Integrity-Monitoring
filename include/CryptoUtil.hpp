@@ -81,3 +81,9 @@ public:
     // Helper: Convert hex string to binary vector
     static std::vector<unsigned char> FromHex(const std::string& hex);
 };
+
+class AESUtil {
+    public:
+        static std::vector<unsigned char> GenerateIV(size_t length);
+        static std::string ToHex(const std::vector<unsigned char>& data);
+};

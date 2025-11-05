@@ -50,7 +50,7 @@ void SetStdinEcho(bool enable) {
 }
 
 std::string getPwdFilePath() {
-	return "/tmp/pwd.yaml";
+	return "pwd.yaml";
 }
 #endif /* ifdef _WIN32 */
 

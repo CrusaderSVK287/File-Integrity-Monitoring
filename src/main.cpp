@@ -102,11 +102,13 @@ int main(int argc, char **argv)
     Config &cfg = Config::getInstance("config.yaml");
     logging::msg("Configuration version: " + cfg.get<std::string>("version"));
 
-    /*SecurityManager &sec = SecurityManager::getInstance();
+    SecurityManager &sec = SecurityManager::getInstance();
     if (sec.VerifyPassword())
         std::cout << "OK";
-    else 
-        std::cout << "Bad pass";*/
+    else  {
+        std::cout << "Bad pass";
+        return 1;
+    }
 
     // TODO: startmonitoring will throw exceptions (check declaration), support that
     Monitor monitor;
