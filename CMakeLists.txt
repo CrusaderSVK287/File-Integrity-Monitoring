@@ -87,11 +87,21 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/Release/
         COMMENT "Copying config.yaml to output/Release"
     )
+    add_custom_command(
+        TARGET monitor POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/index.html ${CMAKE_SOURCE_DIR}/output/Release/
+        COMMENT "Copying index.html to output/Release"
+    )
 elseif(UNIX)
     add_custom_command(
         TARGET monitor POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/config.yaml ${CMAKE_SOURCE_DIR}/output/
-        COMMENT "Copying config.yaml to output/"
+        COMMENT "Copying config.yaml to output/Release"
+    )
+    add_custom_command(
+        TARGET monitor POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/index.html ${CMAKE_SOURCE_DIR}/output/
+        COMMENT "Copying index.html to output/"
     )
 endif()
 

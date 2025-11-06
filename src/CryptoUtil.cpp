@@ -1,38 +1,97 @@
 #include <CryptoUtil.hpp>
-#include <log.hpp>
+#include <Log.hpp>
+#include <cstdint>
 #include <openssl/evp.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 
-std::string SHA256Util::sha256(const std::string& input)
+std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* algorithm ,const FilterMap &filters)
 {
-    logging::info("Running sha256 calculation");
-
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     if (!ctx)
         throw std::runtime_error("Failed to create EVP_MD_CTX");
 
+    if (EVP_DigestInit_ex(ctx, algorithm, nullptr) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Digest initialization failed");
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+        throw std::runtime_error("Failed to open file: " + path);
+
+    uint64_t lineNumber = 0;
+    std::string line;
+    auto it = filters.find(path);
+    // just for logging purposes
+    if (it != filters.end()) 
+        logging::info("Filter for " + path + " found, skiping filtered lines");
+
+    while (std::getline(file, line)) {
+        ++lineNumber;
+
+
+        if (it != filters.end()) {
+            const auto& excludedLines = it->second;
+            if (excludedLines.contains(lineNumber))
+                continue; // Skip this line
+        }
+
+        // Include newline so the hash matches file structure
+        line.push_back('\n');
+        EVP_DigestUpdate(ctx, line.data(), line.size());
+    }
     unsigned char hash[EVP_MAX_MD_SIZE];
     unsigned int hash_len = 0;
 
-    if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) != 1 ||
-        EVP_DigestUpdate(ctx, input.data(), input.size()) != 1 ||
-        EVP_DigestFinal_ex(ctx, hash, &hash_len) != 1) {
+    if (EVP_DigestFinal_ex(ctx, hash, &hash_len) != 1) {
         EVP_MD_CTX_free(ctx);
-        throw std::runtime_error("SHA-256 computation failed using EVP API");
+        throw std::runtime_error("Digest finalization failed");
     }
 
     EVP_MD_CTX_free(ctx);
 
     std::ostringstream oss;
-    for (unsigned int i = 0; i < hash_len; ++i) {
-        oss << std::hex << std::setw(2) << std::setfill('0')
-            << static_cast<int>(hash[i]);
-    }
+    for (unsigned int i = 0; i < hash_len; ++i)
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
 
     return oss.str();
+}
+
+std::string SHAFileUtil::SHA256(const std::string& input ,const FilterMap &filters)
+{
+    logging::info("Running sha256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha256(), filters);
+}
+
+std::string SHAFileUtil::SHA512(const std::string& input ,const FilterMap &filters)
+{
+    logging::info("Running sha512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512(), filters);
+}
+std::string SHAFileUtil::Blake2s256(const std::string &input ,const FilterMap &filters)
+{
+    logging::info("Running blake2s256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha512(), filters);
+}
+std::string SHAFileUtil::Blake2s512(const std::string &input ,const FilterMap &filters)
+{
+    logging::info("Running blake2s512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_blake2b512(), filters);
+}
+std::string SHAFileUtil::SHA3_256(const std::string& input ,const FilterMap &filters)
+{
+    logging::info("Running sha256 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_256(), filters);
+}
+
+std::string SHAFileUtil::SHA3_512(const std::string& input ,const FilterMap &filters)
+{
+    logging::info("Running sha512 calculation");
+    return SHAFileUtil::SHA_Agnostic(input, EVP_sha3_512(), filters);
 }
 
 std::string PBKDF2Util::ToHex(const unsigned char* data, size_t len)
@@ -121,4 +180,21 @@ bool PBKDF2Util::VerifyPassword(const std::string& password,
     logging::info("Verifing password");
     std::vector<unsigned char> dk = DeriveKey(password, salt, iterations, stored_dk.size());
     return CRYPTO_memcmp(dk.data(), stored_dk.data(), dk.size()) == 0;
+}
+
+std::vector<unsigned char> AESUtil::GenerateIV(size_t length = 12) {
+    if (length == 0) throw std::invalid_argument("IV length must be > 0");
+    std::vector<unsigned char> iv(length);
+    if (RAND_bytes(iv.data(), static_cast<int>(length)) != 1) {
+        throw std::runtime_error("RAND_bytes failed to generate IV");
+    }
+    return iv;
+}
+
+std::string AESUtil::ToHex(const std::vector<unsigned char>& data) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (unsigned char b : data)
+        oss << std::setw(2) << static_cast<int>(b);
+    return oss.str();
 }

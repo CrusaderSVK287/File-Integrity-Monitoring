@@ -1,4 +1,4 @@
-#include <log.hpp>
+#include <Log.hpp>
 #include <ostream>
 #include <stdexcept>
 #include <iostream>
@@ -91,7 +91,7 @@ namespace logging
         if (verbosity < LogVerbosity::highest)
             return false;
     
-        return _log("Log", s, verbosity >= LogVerbosity::highest);
+        return _log("Info", s, verbosity >= LogVerbosity::highest);
     }
     
 }

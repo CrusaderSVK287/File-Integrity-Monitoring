@@ -1,7 +1,8 @@
+#include <Monitor.hpp>
 #include <ModuleManager.hpp>
 #include <SecurityManager.hpp>
 #include <Config.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 
 #include <cstring>
 #include <pybind11/embed.h>
@@ -104,9 +105,19 @@ int main(int argc, char **argv)
     SecurityManager &sec = SecurityManager::getInstance();
     if (sec.VerifyPassword())
         std::cout << "OK";
-    else 
+    else  {
         std::cout << "Bad pass";
+        return 1;
+    }
 
+    // TODO: startmonitoring will throw exceptions (check declaration), support that
+    Monitor monitor;
+    if (monitor.Initialise()) {
+        monitor.StartMonitoring();
+    }
+    
+
+    logging::msg("Exiting properly");
     return 0;
 }
 

@@ -1,6 +1,6 @@
 #include <SecurityManager.hpp>
 #include <CryptoUtil.hpp>
-#include <log.hpp>
+#include <Log.hpp>
 
 #include <cctype>
 #include <cstdint>
@@ -50,7 +50,7 @@ void SetStdinEcho(bool enable) {
 }
 
 std::string getPwdFilePath() {
-	return "/tmp/pwd.yaml";
+	return "pwd.yaml";
 }
 #endif /* ifdef _WIN32 */
 
