@@ -332,13 +332,12 @@ std::string AESUtil::AESGcmDecrypt(
         const std::string &key_hex, const int key_len,
         const std::string &ciphertext_hex,
         const std::string &iv_hex,
-        const std::string &tag_hex, int tag_len)
+        const std::string &tag_hex, const int tag_len)
 {
     auto key = hexStringToBytes(key_hex);
     auto iv = hexStringToBytes(iv_hex);
     auto ciphertext = hexStringToBytes(ciphertext_hex);
     auto tag = hexStringToBytes(tag_hex);
-
     if (static_cast<int>(key.size()) != key_len)
         throw std::invalid_argument("Key length (bytes) does not match key_len");
     if (static_cast<int>(iv.size()) == 0)
@@ -389,7 +388,6 @@ std::string AESUtil::AESGcmDecrypt(
 
         int ret = EVP_DecryptFinal_ex(ctx, plaintext.data() + total_len, &out_len);
         if (ret <= 0) {
-            EVP_CIPHER_CTX_free(ctx);
             throw std::runtime_error("Decryption failed: tag mismatch or corrupted data");
         }
 

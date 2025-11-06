@@ -45,6 +45,10 @@ namespace logging
     
             std::string formatted = "[" + timestamp.str() + "] " + pre + ": " + msg;
     
+            if (printToCerr) {
+                std::cerr << formatted << std::endl;
+            }
+
             std::ofstream fout(filepath, std::ios::app);
             if (!fout.is_open()) {
                 throw std::runtime_error("Cannot open log file: " + filepath);
@@ -56,9 +60,6 @@ namespace logging
                 throw std::runtime_error("Failed to write to log file: " + filepath);
             }
     
-            if (printToCerr) {
-                std::cerr << formatted << std::endl;
-            }
         } 
         catch (const std::exception& e) {
             std::cerr << "Failed to log: " << e.what() << std::endl;

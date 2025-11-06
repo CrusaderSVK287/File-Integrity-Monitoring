@@ -8,21 +8,20 @@ public:
     Config(const Config&) = delete;
     Config& operator=(const Config&) = delete;
 
-    static Config& getInstance(const std::string& filename = "config.yaml");
+    static Config& getInstance();
 
     template<typename T>
     T get(const std::string& keyPath) const;
     std::string FilePath() {return m_FilePath;}
+    bool Initialize();
 
     static void __Dump() {std::cout << getInstance().config << std::endl;};
 
 private:
-    const YAML::Node config;
-    const std::string m_FilePath = "";
+    YAML::Node config;
+    std::string m_FilePath = "";
 
-    explicit Config(const std::string& filename) :
-        config(YAML::LoadFile(filename)),
-        m_FilePath(filename){};
+    explicit Config();
 
     YAML::Node getNode(const std::string& keyPath) const;
 };

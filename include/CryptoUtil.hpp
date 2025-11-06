@@ -100,5 +100,5 @@ class AESUtil {
         static std::string AESGcmDecrypt(const std::string &key, const int key_len,
                      const std::string &ciphertext,
                      const std::string &iv,
-                     const std::string &tag, int tag_len = 16);
+                     const std::string &tag, const int tag_len = 16);
 };

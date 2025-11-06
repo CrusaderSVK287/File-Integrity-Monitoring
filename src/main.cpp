@@ -84,58 +84,23 @@ static void _module_testing(int argc, const char **argv)
     std::cout << "}\n";
 }
 
-#include <CryptoUtil.hpp>
-static int AES_test()
-{
-        try {
-        // Example AES-256 key (32 bytes = 64 hex chars)
-        std::string key_hex = "603deb1015ca71be2b73aef0857d7781"
-                              "1f352c073b6108d72d9810a30914dff4";
-
-        // Example 12-byte IV (24 hex chars)
-        std::string iv_hex = "cafebabefacedbaddecaf888";
-
-        // Example plaintext
-        std::string plaintext = "The quick brown fox jumps over the lazy dog";
-
-        // Encrypt
-        auto [ciphertext_hex, tag_hex] = AESUtil::AESGcmEncrypt(
-            key_hex, 32, plaintext, iv_hex, 12, 16);
-
-        std::cout << "Plaintext:    " << plaintext << "\n";
-        std::cout << "Ciphertext:   " << ciphertext_hex << "\n";
-        std::cout << "Tag:          " << tag_hex << "\n";
-
-        // Decrypt
-        std::string decrypted = AESUtil::AESGcmDecrypt(
-            key_hex, 32, ciphertext_hex, iv_hex, tag_hex, 16);
-
-        std::cout << "Decrypted:    " << decrypted << "\n";
-
-        // Verification
-        if (decrypted == plaintext)
-            std::cout << "[OK] Decryption matches original plaintext.\n";
-        else
-            std::cout << "[FAIL] Decrypted text does not match.\n";
-
-    } catch (const std::exception &e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-
-    return 0;
-}
-
 int main(int argc, const char **argv)
 {
-    // TODO: add config
+    // TODO: add config and method to change log verbosity
     logging::init(logging::LogVerbosity::highest);
     logging::info("Logger initialised");
+
+    // Access the security CLI if needed
+    if (argc > 1 && !strcmp(argv[1], "--security")) {
+        logging::msg("Running application in simplified mode. Reason: Security handling");
+        SecurityCLI cli;
+        return cli.Enter(argc, argv);
+    }
 
     py::scoped_interpreter guard{};
     logging::info("Python scoped interpreter pybind11 initialised");
 
-    /* For testing purposes only */
+    /* For testing purposes only, will delete later */
     if (argc > 1 && !strcmp(argv[1], "--module")) {
         logging::warn("[MODULE TESTER]: Running module tester. "
                 "Module will be loaded and run. Then the program will exit");
@@ -143,23 +108,12 @@ int main(int argc, const char **argv)
         return 100;
     }
 
-    /* For testing purposes only */
-    if (argc > 1 && !strcmp(argv[1], "--security")) {
-        logging::msg("Running application in simplified mode. Reason: Security handling");
-        SecurityCLI cli;
-        return cli.Enter(argc, argv);
-    }
-
-    Config &cfg = Config::getInstance("config.yaml");
-    logging::msg("Configuration version: " + cfg.get<std::string>("version"));
-
-    SecurityManager &sec = SecurityManager::getInstance();
-    if (sec.VerifyPassword())
-        std::cout << "OK";
-    else  {
-        std::cout << "Bad pass";
+    // Add proper config file path
+    Config &cfg = Config::getInstance();
+    if (!cfg.Initialize())
         return 1;
-    }
+
+    logging::msg("Configuration version: " + cfg.get<std::string>("version"));
 
     // TODO: startmonitoring will throw exceptions (check declaration), support that
     Monitor monitor;

@@ -4,6 +4,7 @@
 #include <Config.hpp>
 #include <CryptoUtil.hpp>
 #include <cstdint>
+#include <stdexcept>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
 
@@ -77,27 +78,30 @@ int SecurityCLI::EncryptConfig() {
         return 1;
     }
 
-    std::string csalt = SecurityMgr.GetCryptoSalt();
-    uint32_t iterations = SecurityMgr.GetIterations();
-    std::vector<unsigned char> key_raw =  PBKDF2Util::DeriveKey(pwd, csalt, iterations);
-    pwd.erase(); // No longer needed, so erase to avoid possible core dump attack 
-    std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
-
-    std::string plaintext = LoadFile(Cfg.FilePath());
-
-    // std::string, std::string
-    logging::msg("Encrypting configuration file");
-    auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(key, 32, plaintext, SecurityMgr.GetIV(), 12);
-    plaintext.clear(); // No longer needed, so erase to avoid possible core dump attack
-
-    if (!SecurityMgr.SetTag(tag)) {
-        //TODO:: some log idk
-        return 1;
+    try {
+        std::string csalt = SecurityMgr.GetCryptoSalt();
+        uint32_t iterations = SecurityMgr.GetIterations();
+        std::vector<unsigned char> key_raw =  PBKDF2Util::DeriveKey(pwd, csalt, iterations);
+        pwd.erase(); // No longer needed, so erase to avoid possible core dump attack 
+        std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
+    
+        std::string plaintext = LoadFile(Cfg.FilePath());
+    
+        // std::string, std::string
+        auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(key, 32, plaintext, SecurityMgr.GetIV(), 12);
+        plaintext.clear(); // No longer needed, so erase to avoid possible core dump attack
+    
+        if (!SecurityMgr.SetTag(tag)) {
+            //TODO:: some log idk
+            return 1;
+        }
+    
+        std::ofstream fout(Cfg.FilePath());
+        fout << ciphertext;
+    
+    } catch (const std::runtime_error &e) {
+        logging::err(e.what());
     }
-
-    std::ofstream fout(Cfg.FilePath());
-    fout << ciphertext;
-
     return 0;
 }
 
@@ -106,31 +110,34 @@ int SecurityCLI::DecryptConfig() {
     SecurityManager &SecurityMgr = SecurityManager::getInstance();
     Config &Cfg = Config::getInstance();
 
-    std::string pwd = SecurityManager::GetPassword();
-    if (!SecurityMgr.VerifyPassword(pwd)) {
-        return 1;
+    try {
+        std::string pwd = SecurityManager::GetPassword();
+        if (!SecurityMgr.VerifyPassword(pwd)) {
+            return 1;
+        }
+
+        std::string csalt = SecurityMgr.GetCryptoSalt();
+        uint32_t iterations = SecurityMgr.GetIterations();
+        std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
+        pwd.erase(); // Erase sensitive data
+        std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
+
+        std::string ciphertext = LoadFile(Cfg.FilePath());
+
+        std::string iv = SecurityMgr.GetIV();
+        std::string tag = SecurityMgr.GetTag();
+
+        std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, iv, tag);
+
+        ciphertext.clear(); // Wipe sensitive buffer
+
+        std::ofstream fout(Cfg.FilePath());
+        fout << plaintext;
+
+        plaintext.clear(); // Wipe plaintext from memory
+    } catch (const std::runtime_error &e) {
+        logging::err(e.what());
     }
-
-    std::string csalt = SecurityMgr.GetCryptoSalt();
-    uint32_t iterations = SecurityMgr.GetIterations();
-    std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
-    pwd.erase(); // Erase sensitive data
-    std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
-
-    std::string ciphertext = LoadFile(Cfg.FilePath());
-
-    std::string iv = SecurityMgr.GetIV();
-    std::string tag = SecurityMgr.GetTag();
-
-    logging::msg("Decrypting configuration file");
-    std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, iv, tag);
-
-    ciphertext.clear(); // Wipe sensitive buffer
-
-    std::ofstream fout(Cfg.FilePath());
-    fout << plaintext;
-
-    plaintext.clear(); // Wipe plaintext from memory
 
     return 0;
 }
