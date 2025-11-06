@@ -27,8 +27,4 @@ private:
     explicit SecurityManager();
 
     bool GenerateNewPasswordUserInput();
-
-private:
-	// TODO: portability and change to something normal
-	std::string m_sPwdFilePath = "%LOCALAPPDATA%\\Monitor\\pwd.yaml";
 };

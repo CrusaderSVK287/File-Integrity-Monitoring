@@ -38,7 +38,6 @@ std::string getPwdFilePath() {
 
 #else /* ifdef _WIN32 */
 #include <termios.h>
-#include <unistd.h>
 void SetStdinEcho(bool enable) {
     struct termios tty;
     tcgetattr(STDIN_FILENO, &tty);
@@ -96,7 +95,6 @@ SecurityManager& SecurityManager::getInstance() {
 }
 
 SecurityManager::SecurityManager() {
-	m_sPwdFilePath = getPwdFilePath();
 }
 
 std::string SecurityManager::GetPassword()
@@ -117,7 +115,7 @@ bool SecurityManager::VerifyPassword()
 bool SecurityManager::VerifyPassword(std::string password)
 {
     try {
-        YAML::Node yaml = YAML::LoadFile(m_sPwdFilePath);
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
         std::string s_SaltHex = yaml["users"]["admin"]["salt"].as<std::string>();
         std::string s_DkHex = yaml["users"]["admin"]["dk"].as<std::string>();
         int iterations = yaml["users"]["admin"]["iterations"].as<int>();
