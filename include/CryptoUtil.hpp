@@ -6,6 +6,7 @@
 #include <openssl/crypto.h>
 
 #include <string>
+#include <tuple>
 #include <vector>
 #include <map>
 #include <unordered_set>
@@ -69,6 +70,10 @@ public:
                                                  int iterations = 100000,
                                                  size_t dk_len = 32);
 
+    static std::vector<unsigned char> DeriveKey(const std::string& password,
+                                                        const std::string& salt,
+                                                        int iterations = 100000,
+                                                        size_t dk_len = 32);
     // Verify a password against a stored salt and derived key
     static bool VerifyPassword(const std::string& password,
                                 const std::vector<unsigned char>& salt,
@@ -84,6 +89,16 @@ public:
 
 class AESUtil {
     public:
-        static std::vector<unsigned char> GenerateIV(size_t length);
+        static std::string GenerateIV(size_t length);
         static std::string ToHex(const std::vector<unsigned char>& data);
+
+        static std::tuple<std::string, std::string> AESGcmEncrypt(
+                    const std::string &key, const int key_len,
+                    const std::string &plaintext,
+                    const std::string &iv, const int iv_len,
+                    const int tag_len = 16);
+        static std::string AESGcmDecrypt(const std::string &key, const int key_len,
+                     const std::string &ciphertext,
+                     const std::string &iv,
+                     const std::string &tag, int tag_len = 16);
 };

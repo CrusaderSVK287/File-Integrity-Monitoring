@@ -3,6 +3,7 @@
 #include <SecurityManager.hpp>
 #include <Config.hpp>
 #include <Log.hpp>
+#include <SecurityCLI.hpp>
 
 #include <cstring>
 #include <pybind11/embed.h>
@@ -24,7 +25,7 @@ namespace py = pybind11;
 //  argv[x+1] - run key 1
 //  argv[x+2] - run value 1
 //  ....
-static void _module_testing(int argc, char **argv)
+static void _module_testing(int argc, const char **argv)
 {
     const std::string moduleName = argv[2];
 
@@ -80,9 +81,52 @@ static void _module_testing(int argc, char **argv)
         std::string value = py::str(item.second);
         std::cout << "  " << key << ": " << value << "\n";
     }
-    std::cout << "}\n";}
+    std::cout << "}\n";
+}
 
-int main(int argc, char **argv)
+#include <CryptoUtil.hpp>
+static int AES_test()
+{
+        try {
+        // Example AES-256 key (32 bytes = 64 hex chars)
+        std::string key_hex = "603deb1015ca71be2b73aef0857d7781"
+                              "1f352c073b6108d72d9810a30914dff4";
+
+        // Example 12-byte IV (24 hex chars)
+        std::string iv_hex = "cafebabefacedbaddecaf888";
+
+        // Example plaintext
+        std::string plaintext = "The quick brown fox jumps over the lazy dog";
+
+        // Encrypt
+        auto [ciphertext_hex, tag_hex] = AESUtil::AESGcmEncrypt(
+            key_hex, 32, plaintext, iv_hex, 12, 16);
+
+        std::cout << "Plaintext:    " << plaintext << "\n";
+        std::cout << "Ciphertext:   " << ciphertext_hex << "\n";
+        std::cout << "Tag:          " << tag_hex << "\n";
+
+        // Decrypt
+        std::string decrypted = AESUtil::AESGcmDecrypt(
+            key_hex, 32, ciphertext_hex, iv_hex, tag_hex, 16);
+
+        std::cout << "Decrypted:    " << decrypted << "\n";
+
+        // Verification
+        if (decrypted == plaintext)
+            std::cout << "[OK] Decryption matches original plaintext.\n";
+        else
+            std::cout << "[FAIL] Decrypted text does not match.\n";
+
+    } catch (const std::exception &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
+
+int main(int argc, const char **argv)
 {
     // TODO: add config
     logging::init(logging::LogVerbosity::highest);
@@ -97,6 +141,13 @@ int main(int argc, char **argv)
                 "Module will be loaded and run. Then the program will exit");
         _module_testing(argc, argv);
         return 100;
+    }
+
+    /* For testing purposes only */
+    if (argc > 1 && !strcmp(argv[1], "--security")) {
+        logging::msg("Running application in simplified mode. Reason: Security handling");
+        SecurityCLI cli;
+        return cli.Enter(argc, argv);
     }
 
     Config &cfg = Config::getInstance("config.yaml");

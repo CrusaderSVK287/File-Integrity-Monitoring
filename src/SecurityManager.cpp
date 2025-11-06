@@ -99,14 +99,19 @@ SecurityManager::SecurityManager() {
 	m_sPwdFilePath = getPwdFilePath();
 }
 
-bool SecurityManager::VerifyPassword()
+std::string SecurityManager::GetPassword()
 {
     std::cout << "Enter password: ";
     SetStdinEcho(false);
     std::string input;
     std::getline(std::cin, input);
     SetStdinEcho(true);
-    return VerifyPassword(input);
+    return input;
+}
+
+bool SecurityManager::VerifyPassword()
+{
+    return VerifyPassword(SecurityManager::GetPassword());
 }
 
 bool SecurityManager::VerifyPassword(std::string password)
@@ -171,19 +176,77 @@ bool SecurityManager::GenerateNewPasswordUserInput()
     uint32_t iterations = 100000;
     // Salt
     std::vector<unsigned char> salt = PBKDF2Util::GenerateSalt(16);
+    std::vector<unsigned char> csalt = PBKDF2Util::GenerateSalt(16);
     // derive key
     std::vector<unsigned char> dk = PBKDF2Util::DeriveKey(password, salt, iterations, 32);
 
     YAML::Node yaml;
     yaml["users"]["admin"]["salt"] = PBKDF2Util::ToHex(salt.data(), salt.size());
+    yaml["users"]["admin"]["csalt"] = PBKDF2Util::ToHex(csalt.data(), csalt.size());
+    yaml["users"]["admin"]["iv"] = AESUtil::GenerateIV(12);
     yaml["users"]["admin"]["dk"] = PBKDF2Util::ToHex(dk.data(), dk.size());
     yaml["users"]["admin"]["iterations"] = iterations;
 
-	std::cout << getPwdFilePath() << std::endl;
     std::ofstream fout(getPwdFilePath());
     fout << yaml;
 
     logging::warn("Password has been changed, please verify that this action is ok");
 
     return true;
+}
+
+std::string SecurityManager::GetCryptoSalt()
+{
+    try {
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
+        return yaml["users"]["admin"]["csalt"].as<std::string>();
+    } catch (...) {
+        return "";
+    }
+}
+
+uint32_t SecurityManager::GetIterations()
+{
+    try {
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
+        return yaml["users"]["admin"]["iterations"].as<uint32_t>();
+    } catch (...) {
+        return 0;
+    }
+}
+
+std::string SecurityManager::GetIV()
+{
+    try {
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
+        return yaml["users"]["admin"]["iv"].as<std::string>();
+    } catch (...) {
+        return "";
+    }
+}
+
+std::string SecurityManager::GetTag()
+{
+    try {
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
+        return yaml["users"]["admin"]["tag"].as<std::string>();
+    } catch (...) {
+        return "";
+    }
+}
+
+bool SecurityManager::SetTag(const std::string &tag)
+{
+    try {
+        YAML::Node yaml = YAML::LoadFile(getPwdFilePath());
+        yaml["users"]["admin"]["tag"] = tag;
+
+        std::ofstream fout(getPwdFilePath(), std::ios::out | std::ios::trunc);
+        fout << yaml;
+
+        return true;
+    } catch (const std::exception &e) {
+        logging::err(e.what());
+        return false;
+    }
 }
