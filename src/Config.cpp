@@ -14,6 +14,11 @@
 #include <string>
 #include <iostream>
 
+#ifdef _WIN32
+    #include <windows.h>
+    #include <shlobj.h>
+#endif
+
 static bool isValidYaml(const std::string& text)
 {
     try {
