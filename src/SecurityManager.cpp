@@ -10,6 +10,7 @@
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
 #include <iostream>
+#include <filesystem>
 #include <string>
 
 #ifdef _WIN32
@@ -38,6 +39,8 @@ std::string SecurityManager::GetPwdFilePath() {
 
 #else /* ifdef _WIN32 */
 #include <termios.h>
+#include <pwd.h>
+#include <unistd.h>
 void SetStdinEcho(bool enable) {
     struct termios tty;
     tcgetattr(STDIN_FILENO, &tty);
@@ -49,7 +52,26 @@ void SetStdinEcho(bool enable) {
 }
 
 std::string SecurityManager::GetPwdFilePath() {
-	return "pwd.yaml";
+    const std::string pwdFileName = "pwd.yaml";
+    const char* home = std::getenv("HOME");
+    
+    // Handle sudo case: if running as root but SUDO_USER is set, use that user's home.
+    const char* sudoUser = std::getenv("SUDO_USER");
+    if (sudoUser && std::string(sudoUser).size() > 0 && geteuid() == 0) {
+        struct passwd* pw = getpwnam(sudoUser);
+        if (pw && pw->pw_dir) {
+            home = pw->pw_dir;
+        }
+    }
+    
+    if (home && std::string(home).size() > 0) {
+        std::string idk = home;
+        idk = idk + "/.local/state/monitor";
+        std::filesystem::create_directories(idk);
+        return std::string(home) + "/.local/state/monitor/" + pwdFileName;
+    } else {
+	    return pwdFileName;
+    }
 }
 #endif /* ifdef _WIN32 */
 

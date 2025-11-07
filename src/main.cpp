@@ -128,6 +128,9 @@ int main(int argc, const char **argv)
     } catch (const std::invalid_argument &e) {
         std::cerr << "Misconfigured: " << e.what() << std::endl;
         return 1;
+    } catch (const std::runtime_error &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
     }
 
     logging::msg("Exiting properly");

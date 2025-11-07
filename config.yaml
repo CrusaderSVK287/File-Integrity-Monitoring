@@ -6,7 +6,8 @@ version: "development branch"
 monitor:
   # Mandatory
   period: 3
-  # Mandatory, supported: sha256, sha512, blake2s256, blake2s512, sha3_256, sha3_512
+  # Mandatory, supported: sha, sha3, blake2s
+  # Algorithm used to generate fingerprints of monitored files
   algorithm: "sha"
   # Mandatory, supported: 256, 512
   key_length: 256
@@ -15,7 +16,8 @@ monitor:
     # Logs wont show on screen at all, default is false
     silent: false
     # Logs will be encrypted, default is false
-    secure: true
+    # At this moment, this can only be true when the config file is encrypted... no fucking idea why
+    secure: false
     # Log verbosity, default is 1. silent overrides any log printing on screen
     # 0: (low), only log errors, errors show on screen
     # 1: (normal), log errors and messages, only errors show on screen

@@ -1,6 +1,7 @@
 #include <Log.hpp>
 #include <Config.hpp>
 #include <cstdint>
+#include <filesystem>
 #include <stdexcept>
 #include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/emit.h>
@@ -36,8 +37,16 @@ static std::string LoadFile(const std::string& path) {
 
 Config::Config()
 {
-    //TODO: Add proper path and windows path
-    m_FilePath = "config.yaml";
+#ifdef _WIN32
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
+        m_FilePath = std::string(path) + "\\config.yaml";
+    } else {
+        m_FilePath = ".\\config.yaml";
+    }
+#else
+    m_FilePath = "/etc/monitor/config.yaml";
+#endif
 }
 
 Config& Config::getInstance() {
@@ -73,6 +82,9 @@ YAML::Node Config::getNode(const std::string& keyPath) const {
 
 bool Config::Initialize()
 {
+    if (!std::filesystem::exists(m_FilePath))
+        throw std::runtime_error("Configuration file not found");
+
     std::string content = LoadFile(m_FilePath);
     bool isHex = !content.empty() && 
         std::all_of(content.begin(), content.end(), [](unsigned char c) {
