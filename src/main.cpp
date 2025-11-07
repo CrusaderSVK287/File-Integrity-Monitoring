@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <pybind11/embed.h>
+#include <stdexcept>
 #include <string>
 #include <iostream>
 
@@ -86,8 +87,7 @@ static void _module_testing(int argc, const char **argv)
 
 int main(int argc, const char **argv)
 {
-    // TODO: add config and method to change log verbosity
-    logging::init(logging::LogVerbosity::low);
+    logging::init(logging::LogVerbosity::normal);
     logging::info("Logger initialised");
 
     // Access the security CLI if needed
@@ -109,19 +109,25 @@ int main(int argc, const char **argv)
     }
 
     Config &cfg = Config::getInstance();
-    if (!cfg.Initialize())
-        return 1;
+    try {
+        if (!cfg.Initialize())
+            return 1;
 
-    if (!logging::setup()) {
-        std::cerr << "Logger setup failed, review configuration" << std::endl;
-        return 1;
-    }
-    logging::msg("Configuration version: " + cfg.get<std::string>("version", "UNKNOWN"));
 
-    // TODO: startmonitoring will throw exceptions (check declaration), support that
-    Monitor monitor;
-    if (monitor.Initialise()) {
-        monitor.StartMonitoring();
+        if (!logging::setup()) {
+            std::cerr << "Logger setup failed, review configuration" << std::endl;
+            return 1;
+        }
+        logging::msg("Configuration version: " + cfg.get<std::string>("version", "UNKNOWN"));
+
+        // TODO: startmonitoring will throw exceptions (check declaration), support that
+        Monitor monitor;
+        if (monitor.Initialise()) {
+            monitor.StartMonitoring();
+        }
+    } catch (const std::invalid_argument &e) {
+        std::cerr << "Misconfigured: " << e.what() << std::endl;
+        return 1;
     }
 
     logging::msg("Exiting properly");

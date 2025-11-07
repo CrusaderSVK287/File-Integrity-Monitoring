@@ -99,7 +99,7 @@ int SecurityCLI::EncryptConfig() {
         plaintext.clear(); // No longer needed, so erase to avoid possible core dump attack
     
         if (!SecurityMgr.SetTag(tag)) {
-            //TODO:: some log idk
+            logging::info("New configuration Tag was saved");
             return 1;
         }
     

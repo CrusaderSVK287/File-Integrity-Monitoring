@@ -20,7 +20,6 @@ public:
     bool VerifyPassword();
     bool VerifyPassword(std::string password);
 
-    // TODO: Unify these BS methods
     std::string GetCryptoSalt();
     uint32_t GetIterations();
     std::string GetLogSalt();;
@@ -36,6 +35,7 @@ private:
 
     bool GenerateNewPasswordUserInput();
     std::string GetPwdFilePath();
+    std::string GetPwdFileConfigString(const std::string &s);
 
 private:
     std::string m_LogKey = "";

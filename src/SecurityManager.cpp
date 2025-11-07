@@ -196,25 +196,20 @@ bool SecurityManager::GenerateNewPasswordUserInput()
     return true;
 }
 
-std::string SecurityManager::GetCryptoSalt()
+std::string SecurityManager::GetPwdFileConfigString(const std::string &s)
 {
     try {
         YAML::Node yaml = YAML::LoadFile(GetPwdFilePath());
-        return yaml["users"]["admin"]["csalt"].as<std::string>();
+        return yaml["users"]["admin"][s].as<std::string>();
     } catch (...) {
         return "";
     }
 }
 
-std::string SecurityManager::GetLogSalt()
-{
-    try {
-        YAML::Node yaml = YAML::LoadFile(GetPwdFilePath());
-        return yaml["users"]["admin"]["lsalt"].as<std::string>();
-    } catch (...) {
-        return "";
-    }
-}
+std::string SecurityManager::GetCryptoSalt(){return GetPwdFileConfigString("csalt");}
+std::string SecurityManager::GetLogSalt(){return GetPwdFileConfigString("lsalt");}
+std::string SecurityManager::GetIV(){return GetPwdFileConfigString("iv");}
+std::string SecurityManager::GetTag() {return GetPwdFileConfigString("tag");}
 
 uint32_t SecurityManager::GetIterations()
 {
@@ -223,26 +218,6 @@ uint32_t SecurityManager::GetIterations()
         return yaml["users"]["admin"]["iterations"].as<uint32_t>();
     } catch (...) {
         return 0;
-    }
-}
-
-std::string SecurityManager::GetIV()
-{
-    try {
-        YAML::Node yaml = YAML::LoadFile(GetPwdFilePath());
-        return yaml["users"]["admin"]["iv"].as<std::string>();
-    } catch (...) {
-        return "";
-    }
-}
-
-std::string SecurityManager::GetTag()
-{
-    try {
-        YAML::Node yaml = YAML::LoadFile(GetPwdFilePath());
-        return yaml["users"]["admin"]["tag"].as<std::string>();
-    } catch (...) {
-        return "";
     }
 }
 
