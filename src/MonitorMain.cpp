@@ -3,10 +3,6 @@
 #include <PortabilityUtils.hpp>
 #include <Log.hpp>
 
-#ifdef __linux__
-#include <unistd.h>
-#endif
-
 extern volatile int _signal_Interrupt;
 
 void Monitor::StartMonitoring()

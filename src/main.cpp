@@ -3,6 +3,7 @@
 #include <SecurityManager.hpp>
 #include <Config.hpp>
 #include <Log.hpp>
+#include <SecurityCLI.hpp>
 
 #include <cstring>
 #include <pybind11/embed.h>
@@ -24,7 +25,7 @@ namespace py = pybind11;
 //  argv[x+1] - run key 1
 //  argv[x+2] - run value 1
 //  ....
-static void _module_testing(int argc, char **argv)
+static void _module_testing(int argc, const char **argv)
 {
     const std::string moduleName = argv[2];
 
@@ -80,18 +81,26 @@ static void _module_testing(int argc, char **argv)
         std::string value = py::str(item.second);
         std::cout << "  " << key << ": " << value << "\n";
     }
-    std::cout << "}\n";}
+    std::cout << "}\n";
+}
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
-    // TODO: add config
-    logging::init(logging::LogVerbosity::highest);
+    // TODO: add config and method to change log verbosity
+    logging::init(logging::LogVerbosity::low);
     logging::info("Logger initialised");
+
+    // Access the security CLI if needed
+    if (argc > 1 && !strcmp(argv[1], "--security")) {
+        logging::msg("Running application in simplified mode. Reason: Security handling");
+        SecurityCLI cli;
+        return cli.Enter(argc, argv);
+    }
 
     py::scoped_interpreter guard{};
     logging::info("Python scoped interpreter pybind11 initialised");
 
-    /* For testing purposes only */
+    /* For testing purposes only, will delete later */
     if (argc > 1 && !strcmp(argv[1], "--module")) {
         logging::warn("[MODULE TESTER]: Running module tester. "
                 "Module will be loaded and run. Then the program will exit");
@@ -99,23 +108,21 @@ int main(int argc, char **argv)
         return 100;
     }
 
-    Config &cfg = Config::getInstance("config.yaml");
-    logging::msg("Configuration version: " + cfg.get<std::string>("version"));
+    Config &cfg = Config::getInstance();
+    if (!cfg.Initialize())
+        return 1;
 
-    SecurityManager &sec = SecurityManager::getInstance();
-    if (sec.VerifyPassword())
-        std::cout << "OK";
-    else  {
-        std::cout << "Bad pass";
+    if (!logging::setup()) {
+        std::cerr << "Logger setup failed, review configuration" << std::endl;
         return 1;
     }
+    logging::msg("Configuration version: " + cfg.get<std::string>("version", "UNKNOWN"));
 
     // TODO: startmonitoring will throw exceptions (check declaration), support that
     Monitor monitor;
     if (monitor.Initialise()) {
         monitor.StartMonitoring();
     }
-    
 
     logging::msg("Exiting properly");
     return 0;
