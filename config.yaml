@@ -1,17 +1,36 @@
 # Example config
+# Madatory, servers as a check when the application is ran
 version: "development branch"
 
+# Mandatory, monitor general settings setup
 monitor:
+  # Mandatory
   period: 3
-  algorithm: "sha256"
+  # Mandatory, supported: sha, sha3, blake2s
+  # Algorithm used to generate fingerprints of monitored files
+  algorithm: "sha"
+  # Mandatory, supported: 256, 512
+  key_length: 256
+  # Optional, logging setup
   log:
+    # Logs wont show on screen at all, default is false
     silent: false
-    secure: true
+    # Logs will be encrypted, default is false
+    # At this moment, this can only be true when the config file is encrypted... no fucking idea why
+    secure: false
+    # Log verbosity, default is 1. silent overrides any log printing on screen
+    # 0: (low), only log errors, errors show on screen
+    # 1: (normal), log errors and messages, only errors show on screen
+    # 2: (high), log both errors and messages, both show on screen
+    # 3: (highest), log info as well, all show on screen. Not recommended, only when debugging
     verbosity: 3
 
+# Mandatory, files that the monitor will watch
 files:
   - "index.html"
 
+# Filters. Each sequence member has a file and lines 
+# which to exclude when monitoring, example for excluding lines 8, 2, 3, 4
 filter:
   - file: "index.html"
     lines: "8,2-4"

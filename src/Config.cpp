@@ -1,6 +1,7 @@
 #include <Log.hpp>
 #include <Config.hpp>
 #include <cstdint>
+#include <filesystem>
 #include <stdexcept>
 #include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/emit.h>
@@ -12,6 +13,11 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+
+#ifdef _WIN32
+    #include <windows.h>
+    #include <shlobj.h>
+#endif
 
 static bool isValidYaml(const std::string& text)
 {
@@ -36,8 +42,16 @@ static std::string LoadFile(const std::string& path) {
 
 Config::Config()
 {
-    //TODO: Add proper path and windows path
-    m_FilePath = "config.yaml";
+#ifdef _WIN32
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
+        m_FilePath = std::string(path) + "\\config.yaml";
+    } else {
+        m_FilePath = ".\\config.yaml";
+    }
+#else
+    m_FilePath = "/etc/monitor/config.yaml";
+#endif
 }
 
 Config& Config::getInstance() {
@@ -73,6 +87,9 @@ YAML::Node Config::getNode(const std::string& keyPath) const {
 
 bool Config::Initialize()
 {
+    if (!std::filesystem::exists(m_FilePath))
+        throw std::runtime_error("Configuration file not found");
+
     std::string content = LoadFile(m_FilePath);
     bool isHex = !content.empty() && 
         std::all_of(content.begin(), content.end(), [](unsigned char c) {
@@ -93,12 +110,8 @@ bool Config::Initialize()
             std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
             std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
 
-            std::string iv = SecurityMgr.GetIV();
-            std::string tag = SecurityMgr.GetTag();
-
-            logging::msg("Decrypting configuration file");
             // override content
-            content = AESUtil::AESGcmDecrypt(key, 32, content, iv, tag);
+            content = AESUtil::AESGcmDecrypt(key, 32, content, SecurityMgr.GetCIV(), SecurityMgr.GetTag());
 
             // While we are here, set up the LogKey
             std::string lsalt = SecurityMgr.GetLogSalt();

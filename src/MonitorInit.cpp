@@ -113,18 +113,23 @@ bool Monitor::InitialiseConfig()
     m_u64period = Cfg.get<uint64_t>("monitor.period");
     // Hashing algorhitm
     std::string hashAlgo = Cfg.get<std::string>("monitor.algorithm");
+    uint32_t key_lenght = Cfg.get<uint32_t>("monitor.key_length");
+
+    if (key_lenght != 256 && key_lenght != 512)
+        throw std::invalid_argument("Invalid key lenght. Only 256 and 512 is supported");
+
     m_hashAlgorhitm = &SHAFileUtil::SHA256;
-    if (hashAlgo == "sha256")
+    if (hashAlgo == "sha" && key_lenght == 256)
         m_hashAlgorhitm = &SHAFileUtil::SHA256;
-    else if (hashAlgo == "sha512")
+    else if (hashAlgo == "sha" && key_lenght == 512)
         m_hashAlgorhitm = &SHAFileUtil::SHA512;
-    else if (hashAlgo == "blake2s256")
+    else if (hashAlgo == "blake2s" && key_lenght == 256)
         m_hashAlgorhitm = &SHAFileUtil::Blake2s256;
-    else if (hashAlgo == "blake2s512")
+    else if (hashAlgo == "blake2s" && key_lenght == 512)
         m_hashAlgorhitm = &SHAFileUtil::Blake2s512;
-    else if (hashAlgo == "sha3_256")
+    else if (hashAlgo == "sha3" && key_lenght == 256)
         m_hashAlgorhitm = &SHAFileUtil::SHA3_256;
-    else if (hashAlgo == "sha3_512")
+    else if (hashAlgo == "sha3" && key_lenght == 512)
         m_hashAlgorhitm = &SHAFileUtil::SHA3_512;
     else
         throw std::invalid_argument("Unsupported hash algorithm: " + hashAlgo);
