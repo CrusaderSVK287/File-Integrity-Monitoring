@@ -105,12 +105,8 @@ bool Config::Initialize()
             std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
             std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
 
-            std::string iv = SecurityMgr.GetIV();
-            std::string tag = SecurityMgr.GetTag();
-
-            logging::msg("Decrypting configuration file");
             // override content
-            content = AESUtil::AESGcmDecrypt(key, 32, content, iv, tag);
+            content = AESUtil::AESGcmDecrypt(key, 32, content, SecurityMgr.GetCIV(), SecurityMgr.GetTag());
 
             // While we are here, set up the LogKey
             std::string lsalt = SecurityMgr.GetLogSalt();

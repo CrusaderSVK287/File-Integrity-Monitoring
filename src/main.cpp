@@ -92,7 +92,6 @@ int main(int argc, const char **argv)
 
     // Access the security CLI if needed
     if (argc > 1 && !strcmp(argv[1], "--security")) {
-        logging::msg("Running application in simplified mode. Reason: Security handling");
         SecurityCLI cli;
         return cli.Enter(argc, argv);
     }

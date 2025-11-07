@@ -24,6 +24,8 @@ public:
     uint32_t GetIterations();
     std::string GetLogSalt();;
     std::string GetIV();
+    std::string GetCIV();
+    std::string GetLIV();
     std::string GetTag();
     bool SetTag(const std::string &tag);
 

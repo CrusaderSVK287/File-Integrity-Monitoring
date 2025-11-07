@@ -95,7 +95,7 @@ int SecurityCLI::EncryptConfig() {
         std::string plaintext = LoadFile(Cfg.FilePath());
     
         // std::string, std::string
-        auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(key, 32, plaintext, SecurityMgr.GetIV(), 12);
+        auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(key, 32, plaintext, SecurityMgr.GetCIV(), 12);
         plaintext.clear(); // No longer needed, so erase to avoid possible core dump attack
     
         if (!SecurityMgr.SetTag(tag)) {
@@ -130,12 +130,7 @@ int SecurityCLI::DecryptConfig() {
         std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
 
         std::string ciphertext = LoadFile(Cfg.FilePath());
-
-        std::string iv = SecurityMgr.GetIV();
-        std::string tag = SecurityMgr.GetTag();
-
-        std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, iv, tag);
-
+        std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, SecurityMgr.GetCIV(), SecurityMgr.GetTag());
         ciphertext.clear(); // Wipe sensitive buffer
 
         std::ofstream fout(Cfg.FilePath());
@@ -218,7 +213,7 @@ int SecurityCLI::DecryptLogs() {
     std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, lsalt, iterations);
     pwd.clear();
     std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
-    std::string iv = SecurityMgr.GetIV();
+    std::string iv = SecurityMgr.GetLIV();
 
     for (const auto& filename : files) {
 #ifdef _WIN32

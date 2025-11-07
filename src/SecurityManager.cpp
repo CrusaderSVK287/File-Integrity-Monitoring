@@ -207,6 +207,8 @@ bool SecurityManager::GenerateNewPasswordUserInput()
     yaml["users"]["admin"]["csalt"] = PBKDF2Util::ToHex(csalt.data(), csalt.size());
     yaml["users"]["admin"]["lsalt"] = PBKDF2Util::ToHex(lsalt.data(), lsalt.size());
     yaml["users"]["admin"]["iv"] = AESUtil::GenerateIV(12);
+    yaml["users"]["admin"]["civ"] = AESUtil::GenerateIV(12);
+    yaml["users"]["admin"]["liv"] = AESUtil::GenerateIV(12);
     yaml["users"]["admin"]["dk"] = PBKDF2Util::ToHex(dk.data(), dk.size());
     yaml["users"]["admin"]["iterations"] = iterations;
 
@@ -231,6 +233,8 @@ std::string SecurityManager::GetPwdFileConfigString(const std::string &s)
 std::string SecurityManager::GetCryptoSalt(){return GetPwdFileConfigString("csalt");}
 std::string SecurityManager::GetLogSalt(){return GetPwdFileConfigString("lsalt");}
 std::string SecurityManager::GetIV(){return GetPwdFileConfigString("iv");}
+std::string SecurityManager::GetCIV(){return GetPwdFileConfigString("civ");}
+std::string SecurityManager::GetLIV(){return GetPwdFileConfigString("liv");}
 std::string SecurityManager::GetTag() {return GetPwdFileConfigString("tag");}
 
 uint32_t SecurityManager::GetIterations()

@@ -82,9 +82,7 @@ namespace logging
             uint32_t iterations = SecurityMgr.GetIterations();
         
             // std::string, std::string
-            auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(SecurityMgr.LogKey(), 32, s, SecurityMgr.GetIV(), 12);
-
-            std::cout << "KEY:" << SecurityMgr.LogKey() << std::endl;
+            auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(SecurityMgr.LogKey(), 32, s, SecurityMgr.GetLIV(), 12);
         
             return tag + ciphertext;
         } catch (const std::runtime_error &e) {
