@@ -4,9 +4,11 @@
 #include <Config.hpp>
 #include <CryptoUtil.hpp>
 #include <cstdint>
+#include <filesystem>
 #include <stdexcept>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
+#include <PortabilityUtils.hpp>
 
 #include <fstream>
 #include <string>
@@ -44,6 +46,8 @@ int SecurityCLI::Enter(const int argc, const char **argv)
 
     if (op == "usage" || op == "help") {
         return Usage();
+    } else if (op == "pwd") {
+        return GeneratePassword();
     } else if (op == "encrypt") {
         if (argc != 4) return FailWithUsage();
         std::string sub = argv[3];
@@ -151,5 +155,21 @@ int SecurityCLI::Verify() {
 }
 
 int SecurityCLI::Usage() {
+    return 0;
+}
+
+int SecurityCLI::GeneratePassword() {
+    SecurityManager &SecMgr = SecurityManager::getInstance();
+    
+    if (std::filesystem::exists(SecMgr.GetPwdFilePath()) && SecMgr.VerifyPassword()) {
+        std::cout << std::endl;
+        SecMgr.GenerateNewPasswordUserInput();
+    } else if (!std::filesystem::exists(SecMgr.GetPwdFilePath())) {
+        SecMgr.GenerateNewPasswordUserInput();
+    } else {
+        SLEEP(3);
+        std::cout <<std::endl << "Failed to verify password" << std::endl;
+    }
+
     return 0;
 }

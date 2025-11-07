@@ -10,6 +10,8 @@ namespace logging {
     };
 
     bool init(LogVerbosity v);
+    // Call after initialising configuration manager
+    bool setup();
 
     bool msg(std::string);
     bool err(std::string);

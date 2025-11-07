@@ -15,4 +15,5 @@ class SecurityCLI {
 
         int Verify();
         int Usage();
+        int GeneratePassword();
 };

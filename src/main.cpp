@@ -87,7 +87,7 @@ static void _module_testing(int argc, const char **argv)
 int main(int argc, const char **argv)
 {
     // TODO: add config and method to change log verbosity
-    logging::init(logging::LogVerbosity::highest);
+    logging::init(logging::LogVerbosity::low);
     logging::info("Logger initialised");
 
     // Access the security CLI if needed
@@ -108,19 +108,21 @@ int main(int argc, const char **argv)
         return 100;
     }
 
-    // Add proper config file path
     Config &cfg = Config::getInstance();
     if (!cfg.Initialize())
         return 1;
 
-    logging::msg("Configuration version: " + cfg.get<std::string>("version"));
+    if (!logging::setup()) {
+        std::cerr << "Logger setup failed, review configuration" << std::endl;
+        return 1;
+    }
+    logging::msg("Configuration version: " + cfg.get<std::string>("version", "UNKNOWN"));
 
     // TODO: startmonitoring will throw exceptions (check declaration), support that
     Monitor monitor;
     if (monitor.Initialise()) {
         monitor.StartMonitoring();
     }
-    
 
     logging::msg("Exiting properly");
     return 0;

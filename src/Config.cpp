@@ -1,5 +1,6 @@
 #include <Log.hpp>
 #include <Config.hpp>
+#include <cstdint>
 #include <stdexcept>
 #include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/emit.h>
@@ -99,6 +100,11 @@ bool Config::Initialize()
             logging::msg("Decrypting configuration file");
             // override content
             content = AESUtil::AESGcmDecrypt(key, 32, content, iv, tag);
+
+            // While we are here, set up the LogKey
+            std::string lsalt = SecurityMgr.GetLogSalt();
+            std::vector<unsigned char> LogKey = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
+            SecurityMgr.SetLogKey(PBKDF2Util::ToHex(LogKey.data(), LogKey.size()));
         } else if (!isValidYaml(content)) {
             logging::err("The configuration file appears to be corrupted");
             return false;
@@ -112,3 +118,4 @@ bool Config::Initialize()
     
     return true;
 }
+
