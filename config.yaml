@@ -1,9 +1,13 @@
 # Example config
-version: "123.45"
+version: "development branch"
 
 monitor:
   period: 3
   algorithm: "sha256"
+  log:
+    silent: false
+    secure: true
+    verbosity: 3
 
 files:
   - "index.html"

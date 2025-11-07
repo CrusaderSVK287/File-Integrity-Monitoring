@@ -13,6 +13,9 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <vector>
+
+namespace fs = std::filesystem;
 
 static const std::string _usage = "./monitor --security (encrypt/decrypt) (config/logs) | verify | help";
 
@@ -146,7 +149,102 @@ int SecurityCLI::DecryptConfig() {
     return 0;
 }
 
+static std::tuple<std::string, std::string> SplitAESTagAndData(const std::string& hexString, const int tagLenght = 32) {
+    if (hexString.size() < tagLenght) {
+        throw std::invalid_argument("Input string too short to contain AES tag");
+    }
+
+    std::string tag = hexString.substr(0, tagLenght);
+    std::string data = hexString.substr(tagLenght);
+
+    return std::make_tuple(tag, data);
+}
+
+std::vector<std::string> LoadFileLines(const std::string& inputPath) {
+    std::vector<std::string> lines;
+    std::ifstream file(inputPath);
+
+    if (!file) {
+        std::cerr << "Failed to open file: " << inputPath << std::endl;
+        return lines;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+
+    return lines;
+}
+
 int SecurityCLI::DecryptLogs() {
+    std::string dir = logging::LogDir();
+    std::vector<std::string> files;
+
+    try {
+        if (!fs::exists(dir) || !fs::is_directory(dir)) {
+            std::cerr << "Invalid log directory: " << dir << std::endl;
+            return 1;
+        }
+
+        for (const auto& entry : fs::directory_iterator(dir)) {
+            if (fs::is_regular_file(entry)) {
+                files.push_back(entry.path().filename().string());
+            }
+        }
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Filesystem error: " << e.what() << std::endl;
+        return 1;
+    }
+
+#ifdef _WIN32
+    std::string outDir = dir + "\\decrypted";
+#else
+    std::string outDir = dir + "/decrypted";
+#endif
+
+    fs::create_directories(outDir);
+
+    SecurityManager &SecurityMgr = SecurityManager::getInstance();
+    Config &Cfg = Config::getInstance();
+
+    std::string pwd = SecurityManager::GetPassword();
+    if (!SecurityMgr.VerifyPassword(pwd)) {
+            return 1;
+    }
+
+    std::string lsalt = SecurityMgr.GetLogSalt();
+    uint32_t iterations = SecurityMgr.GetIterations();
+    std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, lsalt, iterations);
+    pwd.clear();
+    std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
+    std::string iv = SecurityMgr.GetIV();
+
+    for (const auto& filename : files) {
+#ifdef _WIN32
+        std::string inputPath = dir + "\\" + filename;
+        std::string outputPath = outDir + "\\" + filename;
+#else
+        std::string inputPath = dir + "/" + filename;
+        std::string outputPath = outDir + "/" + filename;
+#endif
+
+        std::vector<std::string> lines = LoadFileLines(inputPath);
+        std::ofstream outputFile(outputPath, std::ios::binary);
+        if (!outputFile) {
+            std::cerr << "Failed to open output file: " << outputPath << std::endl;
+            continue;
+        }
+
+        for (const std::string &line : lines) {
+            // Decrypt the data (replace this with your decryption function)
+            auto [tag, data] = SplitAESTagAndData(line);
+            std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, data, iv, tag);
+            outputFile << plaintext << std::endl;
+        }
+        outputFile.close();
+    }
+
     return 0;
 }
 

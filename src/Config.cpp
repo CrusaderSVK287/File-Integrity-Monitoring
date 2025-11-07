@@ -91,7 +91,6 @@ bool Config::Initialize()
             std::string csalt = SecurityMgr.GetCryptoSalt();
             uint32_t iterations = SecurityMgr.GetIterations();
             std::vector<unsigned char> key_raw = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
-            pwd.erase(); // Erase sensitive data
             std::string key = PBKDF2Util::ToHex(key_raw.data(), key_raw.size());
 
             std::string iv = SecurityMgr.GetIV();
@@ -103,8 +102,9 @@ bool Config::Initialize()
 
             // While we are here, set up the LogKey
             std::string lsalt = SecurityMgr.GetLogSalt();
-            std::vector<unsigned char> LogKey = PBKDF2Util::DeriveKey(pwd, csalt, iterations);
-            SecurityMgr.SetLogKey(PBKDF2Util::ToHex(LogKey.data(), LogKey.size()));
+            std::vector<unsigned char> LogKey = PBKDF2Util::DeriveKey(pwd, lsalt, iterations);
+            std::string lkey = PBKDF2Util::ToHex(LogKey.data(), LogKey.size());
+            SecurityMgr.SetLogKey(lkey);
         } else if (!isValidYaml(content)) {
             logging::err("The configuration file appears to be corrupted");
             return false;

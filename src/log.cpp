@@ -15,38 +15,51 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
+#else 
+#include <pwd.h>
+#include <unistd.h>
 #endif
 
 static std::string filepath = "";
+static std::string logDir = "";
 static logging::LogVerbosity verbosity = logging::LogVerbosity::normal;
 static bool secureLogs = false;
 static bool silentLogs = false;
 
 namespace logging
 {
-    bool init(LogVerbosity v)
-    {
+    std::string LogDir() { return logDir; }
+
+    bool init(logging::LogVerbosity v) {
         verbosity = v;
         secureLogs = false;
-        std::string logDir;
-
-#ifdef _WIN32
+    
+    #ifdef _WIN32
         char path[MAX_PATH];
         if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
             logDir = std::string(path) + "\\Monitor\\logs\\";
         } else {
-            // Fallback to current directory if AppData is unavailable
             logDir = ".\\Monitor\\logs\\";
         }
-#else /* Linux */
-        const char* home = getenv("HOME");
-        if (home) {
+    #else
+        // --- Linux / Unix ---
+        const char* home = std::getenv("HOME");
+    
+        // Handle sudo case: if running as root but SUDO_USER is set, use that user's home.
+        const char* sudoUser = std::getenv("SUDO_USER");
+        if (sudoUser && std::string(sudoUser).size() > 0 && geteuid() == 0) {
+            struct passwd* pw = getpwnam(sudoUser);
+            if (pw && pw->pw_dir) {
+                home = pw->pw_dir;
+            }
+        }
+    
+        if (home && std::string(home).size() > 0) {
             logDir = std::string(home) + "/.local/state/monitor/logs/";
         } else {
-            // Fallback to current directory
             logDir = "./monitor/logs/";
         }
-#endif /* _WIN32 */
+    #endif
     
         std::filesystem::create_directories(logDir);
     
@@ -56,10 +69,9 @@ namespace logging
         timestamp << std::put_time(std::localtime(&now_time), "%Y-%m-%d_%H-%M-%S");
     
         filepath = logDir + timestamp.str() + "-Monitor.log";
-
+    
         return true;
     }
-
     static std::string EncryptLine(const std::string &s)
     {
         SecurityManager &SecurityMgr = SecurityManager::getInstance();
@@ -71,6 +83,8 @@ namespace logging
         
             // std::string, std::string
             auto [ciphertext, tag] = AESUtil::AESGcmEncrypt(SecurityMgr.LogKey(), 32, s, SecurityMgr.GetIV(), 12);
+
+            std::cout << "KEY:" << SecurityMgr.LogKey() << std::endl;
         
             return tag + ciphertext;
         } catch (const std::runtime_error &e) {
