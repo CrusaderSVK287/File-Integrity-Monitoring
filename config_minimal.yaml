@@ -1,0 +1,6 @@
+# version is mandatory argument
+version: "Minimal config needed to start the program"
+
+# At least one file must be provided, the rest have defaults
+files:
+  - "index.html"

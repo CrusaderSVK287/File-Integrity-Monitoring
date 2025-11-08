@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Filters.hpp"
 #include <cstdint>
+#include <memory>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
@@ -11,7 +13,7 @@
 #include <map>
 #include <unordered_set>
 
-using FilterMap = std::map<std::string, std::unordered_set<uint64_t>>;
+using FilterMap = std::map<std::string, std::vector<std::unique_ptr<Filter>>>;
 
 class SHAFileUtil
 {

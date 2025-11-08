@@ -168,8 +168,8 @@ namespace logging
         secureLogs = Cfg.get<bool>("monitor.log.secure", false);
         // false by default
         silentLogs = Cfg.get<bool>("monitor.log.silent", false);
-        // normal by default
-        uint32_t v = Cfg.get<uint32_t>("monitor.log.verbosity", static_cast<uint32_t>(logging::LogVerbosity::normal));
+        // normal by default. 1 corresponds to logging::LogVerbosity::Normal
+        uint32_t v = Cfg.get<uint32_t>("monitor.log.verbosity", 1);
         verbosity = static_cast<logging::LogVerbosity>(v);
 
         // TODO: Try to fix this issue where I must have encrypted config to have secure logs

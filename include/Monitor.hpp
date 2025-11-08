@@ -1,15 +1,15 @@
 #pragma once
 
 #include <SecurityManager.hpp>
-#include <map>
 #include <pybind11/embed.h>
 #include <ModuleManager.hpp>
 #include <Config.hpp>
+#include <Filters.hpp>
 #include <cstdint>
 #include <vector>
-#include <unordered_set>
+#include <map>
 
-using FilterMap = std::map<std::string, std::unordered_set<uint64_t>>;
+using FilterMap = std::map<std::string, std::vector<std::unique_ptr<Filter>>>;
 using HashFunction = std::string (*)(const std::string& ,const FilterMap &filters);
 
 class Monitor {

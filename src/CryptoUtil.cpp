@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <fstream>
 #include <tuple>
@@ -71,11 +72,29 @@ std::string SHAFileUtil::SHA_Agnostic(const std::string& path, const EVP_MD* alg
     while (std::getline(file, line)) {
         ++lineNumber;
 
-
         if (it != filters.end()) {
-            const auto& excludedLines = it->second;
-            if (excludedLines.contains(lineNumber))
-                continue; // Skip this line
+            const std::vector<std::unique_ptr<Filter>>& filterVec = it->second;
+    
+            bool skipLine = false;
+
+            for (const auto& f : filterVec) {
+                if (auto* linesFilter = dynamic_cast<FilterLines*>(f.get())) {
+                    // Skip this line if it needs to be skipped
+                    skipLine = linesFilter->Contains(lineNumber);
+                }
+                else if (auto* segFilter = dynamic_cast<FilterSegment*>(f.get())) {
+                    if (lineNumber != segFilter->Line())
+                        continue;
+                    // Remove the not needed parts of the line
+                    line = segFilter->Apply(line);
+                } else {
+                    throw std::runtime_error("Failed to dynamically cast Filter object");
+                }
+            }
+
+            // Skips the current line and restarts the outer while loop
+            if (skipLine)
+                continue;
         }
 
         // Include newline so the hash matches file structure

@@ -117,7 +117,7 @@ int main(int argc, const char **argv)
             std::cerr << "Logger setup failed, review configuration" << std::endl;
             return 1;
         }
-        logging::msg("Configuration version: " + cfg.get<std::string>("version", "UNKNOWN"));
+        std::cout << "Configuration version: " << cfg.get<std::string>("version") << std::endl;
 
         // TODO: startmonitoring will throw exceptions (check declaration), support that
         Monitor monitor;
