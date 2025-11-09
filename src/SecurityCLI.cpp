@@ -225,6 +225,26 @@ int SecurityCLI::DecryptLogs() {
 #endif
 
         std::vector<std::string> lines = LoadFileLines(inputPath);
+        // We only want to decrypt the encrypted logs. Verify that this log 
+        // is encrypted by checking whether all lines are hexstrings.
+        // If even one of them isnt, dont decrypt the log as its eighter
+        // not encrypted or corrupted
+        bool isHex = true;
+        for (auto &l : lines) {
+            isHex = !l.empty() && 
+            std::all_of(l.begin(), l.end(), [](unsigned char c) {
+                return std::isxdigit(c);
+            });
+
+            // exit the foreach
+            if (!isHex)
+                break;
+        }
+        // continue with next logfile if this one is not encrypted/is corrupted
+        if (!isHex)
+            continue;
+
+
         std::ofstream outputFile(outputPath, std::ios::binary);
         if (!outputFile) {
             std::cerr << "Failed to open output file: " << outputPath << std::endl;
