@@ -148,8 +148,6 @@ std::string SecurityManager::GetPassword()
     }
 #endif
 
-    std::cout << "###" << input << "###" << std::endl;
-
     return input;
 }
 
