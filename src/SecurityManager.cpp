@@ -121,11 +121,22 @@ SecurityManager::SecurityManager() {
 
 std::string SecurityManager::GetPassword()
 {
-    std::cout << "Enter password: ";
+    std::cout << "Enter password: " << std::flush;
+
     SetStdinEcho(false);
+    std::cin >> std::ws;
+
     std::string input;
     std::getline(std::cin, input);
+
     SetStdinEcho(true);
+    std::cout << std::endl;
+
+    // Trim a trailing CR if present (Windows CRLF -> getline may leave '\r')
+    if (!input.empty() && input.back() == '\r') {
+        input.pop_back();
+    }
+
     return input;
 }
 

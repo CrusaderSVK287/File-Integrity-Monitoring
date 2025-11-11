@@ -45,7 +45,7 @@ Config::Config()
 #ifdef _WIN32
     char path[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, path))) {
-        m_FilePath = std::string(path) + "\\config.yaml";
+        m_FilePath = std::string(path) + "\\Monitor\\config.yaml";
     } else {
         m_FilePath = ".\\config.yaml";
     }
@@ -102,7 +102,8 @@ bool Config::Initialize()
 
             std::string pwd = SecurityManager::GetPassword();
             if (!SecurityMgr.VerifyPassword(pwd)) {
-                return 1;
+                std::cout << "Bad password" << std::endl;
+                return false;
             }
 
             std::string csalt = SecurityMgr.GetCryptoSalt();

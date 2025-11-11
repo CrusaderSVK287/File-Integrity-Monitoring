@@ -67,8 +67,6 @@ int SecurityCLI::Enter(const int argc, const char **argv)
             return DecryptLogs();
         else
              return FailWithUsage();
-    } else if (op == "verify") {
-        return Verify();
     } else {
         return FailWithUsage();
     }
@@ -109,6 +107,8 @@ int SecurityCLI::EncryptConfig() {
     } catch (const std::runtime_error &e) {
         logging::err(e.what());
     }
+    
+    std::cout << "Configuration encrypted" << std::endl;
     return 0;
 }
 
@@ -141,6 +141,7 @@ int SecurityCLI::DecryptConfig() {
         logging::err(e.what());
     }
 
+    std::cout << "Configuration decrypted" << std::endl;
     return 0;
 }
 
@@ -260,10 +261,6 @@ int SecurityCLI::DecryptLogs() {
         outputFile.close();
     }
 
-    return 0;
-}
-
-int SecurityCLI::Verify() {
     return 0;
 }
 
