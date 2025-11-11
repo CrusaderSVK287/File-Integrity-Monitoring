@@ -133,7 +133,7 @@ int SecurityCLI::DecryptConfig() {
         std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, SecurityMgr.GetCIV(), SecurityMgr.GetTag());
         ciphertext.clear(); // Wipe sensitive buffer
 
-        std::ofstream fout(Cfg.FilePath());
+        std::ofstream fout(Cfg.FilePath(), std::ios::out | std::ios::binary);
         fout << plaintext;
 
         plaintext.clear(); // Wipe plaintext from memory
