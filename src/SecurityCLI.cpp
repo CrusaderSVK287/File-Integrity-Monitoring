@@ -67,8 +67,6 @@ int SecurityCLI::Enter(const int argc, const char **argv)
             return DecryptLogs();
         else
              return FailWithUsage();
-    } else if (op == "verify") {
-        return Verify();
     } else {
         return FailWithUsage();
     }
@@ -109,6 +107,8 @@ int SecurityCLI::EncryptConfig() {
     } catch (const std::runtime_error &e) {
         logging::err(e.what());
     }
+    
+    std::cout << "Configuration encrypted" << std::endl;
     return 0;
 }
 
@@ -133,7 +133,7 @@ int SecurityCLI::DecryptConfig() {
         std::string plaintext = AESUtil::AESGcmDecrypt(key, 32, ciphertext, SecurityMgr.GetCIV(), SecurityMgr.GetTag());
         ciphertext.clear(); // Wipe sensitive buffer
 
-        std::ofstream fout(Cfg.FilePath());
+        std::ofstream fout(Cfg.FilePath(), std::ios::out | std::ios::binary);
         fout << plaintext;
 
         plaintext.clear(); // Wipe plaintext from memory
@@ -141,6 +141,7 @@ int SecurityCLI::DecryptConfig() {
         logging::err(e.what());
     }
 
+    std::cout << "Configuration decrypted" << std::endl;
     return 0;
 }
 
@@ -225,6 +226,26 @@ int SecurityCLI::DecryptLogs() {
 #endif
 
         std::vector<std::string> lines = LoadFileLines(inputPath);
+        // We only want to decrypt the encrypted logs. Verify that this log 
+        // is encrypted by checking whether all lines are hexstrings.
+        // If even one of them isnt, dont decrypt the log as its eighter
+        // not encrypted or corrupted
+        bool isHex = true;
+        for (auto &l : lines) {
+            isHex = !l.empty() && 
+            std::all_of(l.begin(), l.end(), [](unsigned char c) {
+                return std::isxdigit(c);
+            });
+
+            // exit the foreach
+            if (!isHex)
+                break;
+        }
+        // continue with next logfile if this one is not encrypted/is corrupted
+        if (!isHex)
+            continue;
+
+
         std::ofstream outputFile(outputPath, std::ios::binary);
         if (!outputFile) {
             std::cerr << "Failed to open output file: " << outputPath << std::endl;
@@ -240,10 +261,6 @@ int SecurityCLI::DecryptLogs() {
         outputFile.close();
     }
 
-    return 0;
-}
-
-int SecurityCLI::Verify() {
     return 0;
 }
 

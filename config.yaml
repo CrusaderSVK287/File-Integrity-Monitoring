@@ -1,21 +1,25 @@
 # Example config
+# Unless stated as mandatory, doesnt need to be included 
+# and the default value will be used
+
 # Madatory, servers as a check when the application is ran
 version: "development branch"
 
-# Mandatory, monitor general settings setup
+# General settings setup
 monitor:
-  # Mandatory
+  # Default value 60. Number of seconds between each scan
   period: 3
-  # Mandatory, supported: sha, sha3, blake2s
+  # Default value "sha". Supported: sha, sha3, blake2s.
   # Algorithm used to generate fingerprints of monitored files
   algorithm: "sha"
-  # Mandatory, supported: 256, 512
+  # Key lenght used in hashing algorhitm. 
+  # Default value 256. Supported: 256, 512
   key_length: 256
-  # Optional, logging setup
+  # Logging setup
   log:
-    # Logs wont show on screen at all, default is false
+    # Default false. Logs wont show on screen at all.
     silent: false
-    # Logs will be encrypted, default is false
+    # Default false. Logs will be encrypted
     # At this moment, this can only be true when the config file is encrypted... no fucking idea why
     secure: false
     # Log verbosity, default is 1. silent overrides any log printing on screen
@@ -28,9 +32,31 @@ monitor:
 # Mandatory, files that the monitor will watch
 files:
   - "index.html"
+# - "another.file"
 
-# Filters. Each sequence member has a file and lines 
-# which to exclude when monitoring, example for excluding lines 8, 2, 3, 4
+# Filters for file contents.
+# Two types of filters: lines filter and segment filter.
+# lines type of filer will ignore given lines in the given file
+# segment filter will ignore substring between start and end
 filter:
-  - file: "index.html"
+    # Mandatory, type of filer
+  - type: "lines"
+    # Mandatory, Name of the file to be filtered
+    file: "index.html"
+    # Mandatory, Numbers of lines to be ignored. CSV format. Supports ranges via dash (-)
     lines: "8,2-4"
+    # Mandatory, type of filer
+  - type: "segment"
+    # Mandatory, Name of the file to be filtered
+    file: "index.html"
+    # Mandatory, Line on which this filter is applied
+    line: 9
+    # Mandatory, Start of the border region
+    start: "<p>"
+    # Mandatory, String up to which all data will be ignored
+    end: "<"
+    # Default false. Whether only the first instance of the region should be ignored or not.
+    # Example: Given we have string for this filer "<p>Jan</p> <p>Jane</>"
+    # When false, its evaluated like this: "<p></p> <p>Jane</>"
+    # When true, its evaluated like this: "<p></p> <p></>"
+    all: false

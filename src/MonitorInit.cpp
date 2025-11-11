@@ -8,8 +8,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <yaml-cpp/exceptions.h>
 #include <yaml-cpp/node/parse.h>
 #include <Config.hpp>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -47,7 +49,7 @@ bool Monitor::Initialise()
     try {
         InitialiseFilters();
     } catch (const std::runtime_error &e) {
-        logging::err("Filter configuration is corrupted. Please review your configuration. The program will continue to run, but no filters will be used");
+        logging::warn("Filter configuration is corrupted. Please review your configuration. The program will continue to run, but no filters will be used");
         m_filters.clear();
     }
 
@@ -65,16 +67,9 @@ bool Monitor::InitialiseModules()
     return result;
 }
 
-bool Monitor::InitialiseFilters()
+static void FilterLinesPopulateSet(std::unordered_set<uint64_t> &set, const std::string &csv)
 {
-    YAML::Node filterNode = Cfg.get<YAML::Node>("filter");
-
-    for (const auto& entry : filterNode) {
-        std::string filename = entry["file"].as<std::string>();
-        std::string linesCSV = entry["lines"].as<std::string>();
-
-        std::unordered_set<uint64_t> lines;
-        std::stringstream ss(linesCSV);
+        std::stringstream ss(csv);
         std::string token;
 
         while (std::getline(ss, token, ',')) {
@@ -87,21 +82,58 @@ bool Monitor::InitialiseFilters()
                 std::istringstream iss(token);
                 if (iss >> lower >> dash >> upper && dash == '-' && lower < upper) {
                     // range string is valid
-                    lines.insert_range(std::views::iota(lower, upper + 1));
+                    set.insert_range(std::views::iota(lower, upper + 1));
                 } else {
                     // in case user is incapable of understanding child-like syntax
-                    logging::err("Invalid format for filter range [" + token + "]. Use correct format [lower-upper]");
-                    throw std::invalid_argument("");
+                    throw std::invalid_argument("Invalid format for filter range [" + token + "]. Use correct format [lower-upper]");
                 }
             }
             // handle single line filter
             else {
                 uint64_t line = std::stoull(token);
-                lines.insert(line);
+                set.insert(line);
             }
         }
+}
 
-        m_filters[filename] = std::move(lines);
+bool Monitor::InitialiseFilters()
+{
+    YAML::Node filterNode;
+    try {
+        filterNode = Cfg.get<YAML::Node>("filter");
+    } catch (const std::runtime_error &e) {
+        // No filters are going to be applied because none exist
+        return false;
+    }
+    if (filterNode.IsNull())
+        // No filters are going to be applied because none exist
+        return false;
+
+    for (const auto& entry : filterNode) {
+        std::string type = entry["type"].as<std::string>();
+
+        if (type == "lines") {
+            std::string filename = entry["file"].as<std::string>();
+            std::string linesCSV = entry["lines"].as<std::string>();
+    
+            logging::info("Setting up Lines filter for " + filename);
+            std::unordered_set<uint64_t> lines;
+            FilterLinesPopulateSet(lines, linesCSV);
+            
+            m_filters[filename].push_back(std::make_unique<FilterLines>(filename, lines));
+        } else if (type == "segment") {
+            std::string filename    = entry["file"].as<std::string>();
+            std::string start       = entry["start"].as<std::string>();
+            std::string end         = entry["end"].as<std::string>();
+            uint64_t line           = entry["line"].as<uint64_t>();
+            bool all = false; // default is false
+            if (entry["all"]) 
+                all = entry["all"].as<bool>();
+            
+            m_filters[filename].push_back(std::make_unique<FilterSegment>(filename, start, end, all, line));
+        } else {
+            throw std::invalid_argument("Unknown filter type: " + type);
+        }
     }
 
     return true;
@@ -110,10 +142,10 @@ bool Monitor::InitialiseFilters()
 bool Monitor::InitialiseConfig()
 {
     // Period
-    m_u64period = Cfg.get<uint64_t>("monitor.period");
+    m_u64period = Cfg.get<uint64_t>("monitor.period", 60);
     // Hashing algorhitm
-    std::string hashAlgo = Cfg.get<std::string>("monitor.algorithm");
-    uint32_t key_lenght = Cfg.get<uint32_t>("monitor.key_length");
+    std::string hashAlgo = Cfg.get<std::string>("monitor.algorithm", "sha");
+    uint32_t key_lenght = Cfg.get<uint32_t>("monitor.key_length", 256);
 
     if (key_lenght != 256 && key_lenght != 512)
         throw std::invalid_argument("Invalid key lenght. Only 256 and 512 is supported");
@@ -134,7 +166,17 @@ bool Monitor::InitialiseConfig()
     else
         throw std::invalid_argument("Unsupported hash algorithm: " + hashAlgo);
 
-    m_files = Cfg.get<std::vector<std::string>>("files");
+    try {
+        m_files = Cfg.get<std::vector<std::string>>("files");
+    } catch (const YAML::BadConversion &e) {
+        // When we get BadConversion, it most likely means that
+        // no files were provided. YAML expects to return a 
+        // vector of strings but there is no value at all
+        throw std::invalid_argument("You need to provide at least one file for monitoring");
+    }
+    if (m_files.size() == 0) {
+        throw std::invalid_argument("You need to provide at least one file for monitoring");
+    }
 
     return true;
 }

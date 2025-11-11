@@ -121,11 +121,33 @@ SecurityManager::SecurityManager() {
 
 std::string SecurityManager::GetPassword()
 {
-    std::cout << "Enter password: ";
+    std::cout << "Enter password: " << std::flush;
+
     SetStdinEcho(false);
+
+// For fucks sake I have no fucking idea why but this fix is only needed on windows
+// becuase fucking hell fuck off microsoft with such shitty apis fucking windows
+// I dont even know if its a problem of windows 11 or windows in genera or just 
+// widnows 11 25H2 but fucking hell get your shit together microsfot this is 
+// literally unworkable I spent HOURS on this shit ffs...
+#ifdef _WIN32
+    std::cin >> std::ws;
+#endif
+
     std::string input;
     std::getline(std::cin, input);
+
     SetStdinEcho(true);
+    std::cout << std::endl;
+
+// Same issue as above, not gonna comment again
+#ifdef _WIN32
+    // Trim a trailing CR if present (Windows CRLF -> getline may leave '\r')
+    if (!input.empty() && input.back() == '\r') {
+        input.pop_back();
+    }
+#endif
+
     return input;
 }
 

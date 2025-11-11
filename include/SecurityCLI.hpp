@@ -13,7 +13,6 @@ class SecurityCLI {
 
         int DecryptLogs();
 
-        int Verify();
         int Usage();
         int GeneratePassword();
 };
