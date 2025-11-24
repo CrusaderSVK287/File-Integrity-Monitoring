@@ -1,3 +1,4 @@
+#include "HashingAlgorithm.hpp"
 #include <CryptoUtil.hpp>
 #include <csignal>
 #include <cstdint>
@@ -150,19 +151,18 @@ bool Monitor::InitialiseConfig()
     if (key_lenght != 256 && key_lenght != 512)
         throw std::invalid_argument("Invalid key lenght. Only 256 and 512 is supported");
 
-    m_hashAlgorhitm = &SHAFileUtil::SHA256;
     if (hashAlgo == "sha" && key_lenght == 256)
-        m_hashAlgorhitm = &SHAFileUtil::SHA256;
+        m_hashAlgorhitm = new HashingAlgorithmSHA256();
     else if (hashAlgo == "sha" && key_lenght == 512)
-        m_hashAlgorhitm = &SHAFileUtil::SHA512;
+        m_hashAlgorhitm = new HashingAlgorithmSHA512();
     else if (hashAlgo == "blake2s" && key_lenght == 256)
-        m_hashAlgorhitm = &SHAFileUtil::Blake2s256;
+        m_hashAlgorhitm = new HashingAlgorithmBlake2s256();
     else if (hashAlgo == "blake2s" && key_lenght == 512)
-        m_hashAlgorhitm = &SHAFileUtil::Blake2s512;
+        m_hashAlgorhitm = new HashingAlgorithmBlake2s512();
     else if (hashAlgo == "sha3" && key_lenght == 256)
-        m_hashAlgorhitm = &SHAFileUtil::SHA3_256;
+        m_hashAlgorhitm = new HashingAlgorithmSHA3_256();
     else if (hashAlgo == "sha3" && key_lenght == 512)
-        m_hashAlgorhitm = &SHAFileUtil::SHA3_512;
+        m_hashAlgorhitm = new HashingAlgorithmSHA3_512();
     else
         throw std::invalid_argument("Unsupported hash algorithm: " + hashAlgo);
 

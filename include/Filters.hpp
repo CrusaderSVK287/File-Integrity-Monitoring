@@ -3,6 +3,14 @@
 #include <cstdint>
 #include <string>
 #include <unordered_set>
+#include <memory>
+#include <vector>
+#include <map>
+
+// forward declaration to allow for FilterMap
+class Filter;
+
+using FilterMap = std::map<std::string, std::vector<std::unique_ptr<Filter>>>;
 
 // Base class
 class Filter {
