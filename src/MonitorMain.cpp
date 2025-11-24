@@ -24,6 +24,7 @@ int Monitor::RunScan()
     //- Verify that the hashes are valid
     //    - If not, send a notify alert to the mailing manager
     //- Continue with next file until all files done
+    // TODO: add delete from table
 
     for (const std::string &file : m_files) {
         // Compute a hash
@@ -46,7 +47,8 @@ int Monitor::RunScan()
 
 std::string Monitor::ComputeHash(const std::string &filename)
 {
-    return m_hashAlgorhitm(filename, m_filters);
+    // TODO: refactor, fuck out the func pointer do some stupid classes or whatever with method overrides
+    return m_hashAlgorhitm->Run(filename, m_filters);
 }
 
 // TODO: implement when database module ready

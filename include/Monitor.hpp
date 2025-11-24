@@ -1,5 +1,6 @@
 #pragma once
 
+#include <HashingAlgorithm.hpp>
 #include <SecurityManager.hpp>
 #include <pybind11/embed.h>
 #include <ModuleManager.hpp>
@@ -7,17 +8,14 @@
 #include <Filters.hpp>
 #include <cstdint>
 #include <vector>
-#include <map>
-
-using FilterMap = std::map<std::string, std::vector<std::unique_ptr<Filter>>>;
-using HashFunction = std::string (*)(const std::string& ,const FilterMap &filters);
 
 class Monitor {
     public:
         Monitor() :
             Security(SecurityManager::getInstance()),
             Modules(ModuleManager()),
-            Cfg(Config::getInstance())
+            Cfg(Config::getInstance()),
+            m_hashAlgorhitm(nullptr)
         {}
 
         bool Initialise();
@@ -47,6 +45,6 @@ class Monitor {
         // Configs
         uint64_t m_u64period = 0;               // Time period between each scans
         std::vector<std::string> m_files;       // Filenames to be monitored
-        HashFunction m_hashAlgorhitm;           // Pointer to the function used for checksumming the files
+        HashingAlgorithm *m_hashAlgorhitm;           // Pointer to the function used for checksumming the files
         FilterMap m_filters;
 };
