@@ -7,11 +7,23 @@
 #include <ctime>
 #include <cstring>
 
-// POSIX / sockets
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
+#ifdef _WIN32
+  #define CLOSE_SOCKET_AND_CLEANUP(s) do { closesocket(s); WSACleanup(); } while(0)
+#else
+  #define CLOSE_SOCKET_AND_CLEANUP(s) do { close(s); } while(0)
+#endif
+
+#ifdef _WIN32
+    #define _WINSOCK_DEPRECATED_NO_WARNINGS
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "ws2_32.lib")
+#else
+    #include <sys/socket.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <unistd.h>
+#endif
 
 // OpenSSL
 #include <openssl/ssl.h>
@@ -71,14 +83,50 @@ static bool sendViaGmailSmtp(
     const char* smtpHost = "smtp.gmail.com";
     const int   smtpPort = 465;
 
-    // 1) DNS look-up
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
+        logging::err("[MailAlertManager] WSAStartup failed.\n");
+        return false;
+    }
+
+    addrinfo hints = {};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    addrinfo* result = nullptr;
+    if (getaddrinfo(smtpHost, "465", &hints, &result) != 0) {
+        logging::err("[MailAlertManager] getaddrinfo failed.\n");
+        WSACleanup();
+        return false;
+    }
+
+    SOCKET sock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (sock == INVALID_SOCKET) {
+        logging::err("[MailAlertManager] socket() failed.\n");
+        freeaddrinfo(result);
+        WSACleanup();
+        return false;
+    }
+
+    if (connect(sock, result->ai_addr, static_cast<int>(result->ai_addrlen)) == SOCKET_ERROR) {
+        logging::err("[MailAlertManager] connect() failed.\n");
+        closesocket(sock);
+        freeaddrinfo(result);
+        WSACleanup();
+        return false;
+    }
+
+    freeaddrinfo(result);
+
+#else
     struct hostent* he = gethostbyname(smtpHost);
     if (!he) {
         logging::err("[MailAlertManager] gethostbyname failed.\n");
         return false;
     }
 
-    // 2) Socket + connect
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         logging::err("[MailAlertManager] socket() failed.\n");
@@ -96,27 +144,31 @@ static bool sendViaGmailSmtp(
         close(sock);
         return false;
     }
+#endif
+
 
     // 3) OpenSSL init
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
     const SSL_METHOD* method = TLS_client_method();
     SSL_CTX* ctx = SSL_CTX_new(method);
-    if (!ctx) {
-        logging::err("[MailAlertManager] SSL_CTX_new failed.\n");
-        close(sock);
-        return false;
-    }
+	if (!ctx) {
+		logging::err("[MailAlertManager] SSL_CTX_new failed.\n");
+		CLOSE_SOCKET_AND_CLEANUP(sock);
+		return false;
+	}
+
 
     SSL* ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, sock);
-    if (SSL_connect(ssl) <= 0) {
-        logging::err("[MailAlertManager] SSL_connect failed.\n");
-        SSL_free(ssl);
-        SSL_CTX_free(ctx);
-        close(sock);
-        return false;
-    }
+	SSL_set_fd(ssl, static_cast<int>(sock));
+	if (SSL_connect(ssl) <= 0) {
+		logging::err("[MailAlertManager] SSL_connect failed.\n");
+		SSL_free(ssl);
+		SSL_CTX_free(ctx);
+		CLOSE_SOCKET_AND_CLEANUP(sock);
+		return false;
+	}
+
 
     // 4) SMTP handshake
     if (!sslReadResponse(ssl)) { // server greeting
@@ -176,8 +228,15 @@ static bool sendViaGmailSmtp(
     SSL_shutdown(ssl);
     SSL_free(ssl);
     SSL_CTX_free(ctx);
+#ifdef _WIN32
+    closesocket(sock);
+    WSACleanup();
+#else
     close(sock);
-    EVP_cleanup();
+#endif
+
+	EVP_cleanup();
+
 
     return true;
 }
