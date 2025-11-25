@@ -1,4 +1,5 @@
-#include "HashingAlgorithm.hpp"
+#include "MailAlertManager.hpp"
+#include <HashingAlgorithm.hpp>
 #include <CryptoUtil.hpp>
 #include <csignal>
 #include <cstdint>
@@ -13,6 +14,7 @@
 #include <yaml-cpp/node/parse.h>
 #include <Config.hpp>
 #include <vector>
+#include <chrono>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -44,6 +46,13 @@ bool Monitor::Initialise()
     result = InitialiseConfig();
     if (!result) {
         logging::err("Failed to initialise one or more config values");
+        return false;
+    }
+    
+    // Mailing should not throw any exceptions because its not a mandatory module
+    result = InitialiseMailing();
+    if (!result) {
+        logging::err("Failed to initialise Mailing Manager, review your configuration");
         return false;
     }
 
@@ -180,3 +189,39 @@ bool Monitor::InitialiseConfig()
 
     return true;
 }
+
+bool Monitor::InitialiseMailing()
+{
+    // Enable. By default false
+    m_MailingEnabled = Cfg.get<bool>("mailing.enable", false);
+    if (!m_MailingEnabled) {
+        // even tho m_MailingEnabled is false, we return true since this is expected behaviour
+        return true;
+    }
+
+    // mandatory params
+    std::string mailUser = Cfg.get<std::string>("mailing.user", "");
+    std::string mailPassword = Cfg.get<std::string>("mailing.password", "");
+    std::vector<std::string> mailList = Cfg.get<std::vector<std::string>>("mailing.list");
+    if (mailUser == "" || mailPassword == "" || mailList.empty()) {
+        return false;
+    }
+
+    // Optional params
+    uint32_t maxEmails = Cfg.get<uint32_t>("mailing.limit", 3); // emails per incident
+    uint32_t minInterval = Cfg.get<uint32_t>("mailing.spacing", 600); // minimal interval between emails
+    uint32_t resetInterval = Cfg.get<uint32_t>("mailing.reset", 3600); // reset number of emails sent for a particular 
+                                                                       // incident after a certain period of time
+    m_MailingManager = new MailAlertManager(
+        mailList,
+        maxEmails,
+        MailAlertManager::Duration(resetInterval),
+        MailAlertManager::Duration(minInterval),
+        false, // dry run, we want to actually send emails
+        mailUser,
+        mailPassword
+    );
+
+    return true;
+}
+

@@ -1,0 +1,321 @@
+#include <MailAlertManager.hpp>
+#include <Log.hpp>
+
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <ctime>
+#include <cstring>
+
+// POSIX / sockets
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
+
+// OpenSSL
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+// ------------------ Helper: Base64 (potrebné pre AUTH LOGIN) ------------------
+
+static const std::string BASE64_CHARS =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+static std::string base64Encode(const std::string& in) {
+    std::string out;
+    int val = 0;
+    int valb = -6;
+    for (unsigned char c : in) {
+        val = (val << 8) + c;
+        valb += 8;
+        while (valb >= 0) {
+            out.push_back(BASE64_CHARS[(val >> valb) & 0x3F]);
+            valb -= 6;
+        }
+    }
+    if (valb > -6) out.push_back(BASE64_CHARS[((val << 8) >> (valb + 8)) & 0x3F]);
+    while (out.size() % 4) out.push_back('=');
+    return out;
+}
+
+// ------------------ Helper: SMTP cez SSL ------------------
+
+static bool sslWriteLine(SSL* ssl, const std::string& line) {
+    std::string data = line + "\r\n";
+    int ret = SSL_write(ssl, data.c_str(), static_cast<int>(data.size()));
+    return (ret > 0);
+}
+
+static bool sslReadResponse(SSL* ssl) {
+    char buf[4096];
+    int ret = SSL_read(ssl, buf, sizeof(buf) - 1);
+    if (ret <= 0) {
+        return false;
+    }
+    buf[ret] = '\0';
+    logging::msg("[SMTP] " + std::string(buf));  // logni si odpoveď
+    return true;
+}
+
+// Jednoduché odoslanie cez Gmail SMTP (smtp.gmail.com:465, TLS od začiatku)
+static bool sendViaGmailSmtp(
+    const std::string& gmailUser,
+    const std::string& gmailAppPassword,
+    const std::string& fromAddress,
+    const std::vector<std::string>& recipients,
+    const std::string& rawMessage
+) {
+    const char* smtpHost = "smtp.gmail.com";
+    const int   smtpPort = 465;
+
+    // 1) DNS look-up
+    struct hostent* he = gethostbyname(smtpHost);
+    if (!he) {
+        logging::err("[MailAlertManager] gethostbyname failed.\n");
+        return false;
+    }
+
+    // 2) Socket + connect
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        logging::err("[MailAlertManager] socket() failed.\n");
+        return false;
+    }
+
+    struct sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(smtpPort);
+    std::memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        logging::err("[MailAlertManager] connect() failed.\n");
+        close(sock);
+        return false;
+    }
+
+    // 3) OpenSSL init
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+    const SSL_METHOD* method = TLS_client_method();
+    SSL_CTX* ctx = SSL_CTX_new(method);
+    if (!ctx) {
+        logging::err("[MailAlertManager] SSL_CTX_new failed.\n");
+        close(sock);
+        return false;
+    }
+
+    SSL* ssl = SSL_new(ctx);
+    SSL_set_fd(ssl, sock);
+    if (SSL_connect(ssl) <= 0) {
+        logging::err("[MailAlertManager] SSL_connect failed.\n");
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        close(sock);
+        return false;
+    }
+
+    // 4) SMTP handshake
+    if (!sslReadResponse(ssl)) { // server greeting
+        logging::err("[MailAlertManager] No greeting.\n");
+    }
+
+    if (!sslWriteLine(ssl, "EHLO localhost") || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] EHLO failed.\n");
+    }
+
+    // 5) AUTH LOGIN
+    if (!sslWriteLine(ssl, "AUTH LOGIN") || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] AUTH LOGIN start failed.\n");
+    }
+
+    std::string userB64 = base64Encode(gmailUser);
+    if (!sslWriteLine(ssl, userB64) || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] AUTH LOGIN user failed.\n");
+    }
+
+    std::string passB64 = base64Encode(gmailAppPassword);
+    if (!sslWriteLine(ssl, passB64) || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] AUTH LOGIN password failed.\n");
+    }
+
+    // 6) MAIL FROM
+    std::string mailFromCmd = "MAIL FROM:<" + fromAddress + ">";
+    if (!sslWriteLine(ssl, mailFromCmd) || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] MAIL FROM failed.\n");
+    }
+
+    // 7) RCPT TO pre každého príjemcu
+    for (const auto& rcpt : recipients) {
+        std::string rcptCmd = "RCPT TO:<" + rcpt + ">";
+        if (!sslWriteLine(ssl, rcptCmd) || !sslReadResponse(ssl)) {
+            logging::err("[MailAlertManager] RCPT TO failed for " + rcpt + "\n");
+        }
+    }
+
+    // 8) DATA
+    if (!sslWriteLine(ssl, "DATA") || !sslReadResponse(ssl)) {
+        logging::err("[MailAlertManager] DATA failed.\n");
+    }
+
+    // 9) Poslať rawMessage + "\r\n.\r\n"
+    std::string dataToSend = rawMessage + "\r\n.\r\n";
+    if (SSL_write(ssl, dataToSend.c_str(), static_cast<int>(dataToSend.size())) <= 0) {
+        logging::err("[MailAlertManager] SSL_write DATA failed.\n");
+    }
+    sslReadResponse(ssl); // response na DATA
+
+    // 10) QUIT
+    sslWriteLine(ssl, "QUIT");
+    sslReadResponse(ssl);
+
+    // 11) Cleanup
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
+    close(sock);
+    EVP_cleanup();
+
+    return true;
+}
+
+// ------------------ MailAlertManager implementácia ------------------
+
+MailAlertManager::MailAlertManager(
+    std::vector<std::string> mailingList,
+    int maxEmailsPerIncident,
+    Duration resetAfter,
+    Duration minIntervalBetweenEmails,
+    bool dryRun,
+    std::string gmailUser,
+    std::string gmailAppPassword
+)
+    : mailingList_(std::move(mailingList)),
+      maxEmailsPerIncident_(maxEmailsPerIncident),
+      resetAfter_(resetAfter),
+      minIntervalBetweenEmails_(minIntervalBetweenEmails),
+      dryRun_(dryRun),
+      gmailUser_(std::move(gmailUser)),
+      gmailAppPassword_(std::move(gmailAppPassword))
+{
+}
+
+bool MailAlertManager::run(const std::string& incidentId, const std::string& msg)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    const auto now = Clock::now();
+
+    auto& state = incidents_[incidentId];
+
+    // 1) Reset counter po dlhšej dobe neaktivity
+    if (state.lastSent.has_value()) {
+        auto diff = now - state.lastSent.value();
+        if (diff >= resetAfter_) {
+            state.count = 0;
+            state.lastSent.reset();
+        }
+    }
+
+    // 2) Limit počtu mailov
+    if (state.count >= maxEmailsPerIncident_) {
+        return false;
+    }
+
+    // 3) Minimálny interval medzi mailami
+    if (state.lastSent.has_value()) {
+        auto sinceLast = now - state.lastSent.value();
+        if (sinceLast < minIntervalBetweenEmails_) {
+            return false;
+        }
+    }
+
+    int currentCount = state.count + 1;
+    bool isLast = (currentCount == maxEmailsPerIncident_);
+
+    std::ostringstream subject;
+    subject << "[ALERT] Incident " << incidentId
+            << " (" << currentCount << "/" << maxEmailsPerIncident_ << ")";
+
+    std::ostringstream body;
+    auto now_time_t = Clock::to_time_t(now);
+
+    body << "Incident ID: " << incidentId << "\n";
+    body << "Time: " << std::ctime(&now_time_t);
+    body << "\nMessage:\n";
+    body << msg << "\n\n";
+    body << "This is alert #" << currentCount
+         << " of " << maxEmailsPerIncident_
+         << " for this incident.\n";
+
+    if (isLast) {
+        body << "\nNOTE: Maximum number of alerts for this incident has been reached.\n"
+             << "No further emails will be sent for this incident until the counter is\n"
+             << "reset (no alerts for "
+             << std::chrono::duration_cast<std::chrono::minutes>(resetAfter_).count()
+             << " minutes) or a manual reset.\n";
+    }
+
+    sendEmail(subject.str(), body.str());
+
+    state.count = currentCount;
+    state.lastSent = now;
+
+    return true;
+}
+
+void MailAlertManager::markResolved(const std::string& incidentId)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    incidents_.erase(incidentId);
+}
+
+void MailAlertManager::resetAll()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    incidents_.clear();
+}
+
+void MailAlertManager::sendEmail(const std::string& subject, const std::string& body)
+{
+    if (dryRun_) {
+        std::cerr << "[MailAlertManager DRY-RUN] Would send email:\n";
+        std::cerr << "To: ";
+        for (size_t i = 0; i < mailingList_.size(); ++i) {
+            std::cerr << mailingList_[i];
+            if (i + 1 < mailingList_.size()) std::cerr << ", ";
+        }
+        std::cerr << "\nSubject: " << subject << "\n\n"
+                  << body << "\n"
+                  << "----------------------------------------\n";
+        return;
+    }
+
+    if (mailingList_.empty()) {
+        logging::err("[MailAlertManager] Mailing list is empty, not sending.\n");
+        return;
+    }
+
+    // poskladáme celý raw SMTP message (headers + body)
+    std::ostringstream oss;
+    oss << "From: " << gmailUser_ << "\r\n";
+    oss << "To: ";
+    for (size_t i = 0; i < mailingList_.size(); ++i) {
+        oss << mailingList_[i];
+        if (i + 1 < mailingList_.size()) oss << ", ";
+    }
+    oss << "\r\n";
+    oss << "Subject: " << subject << "\r\n";
+    oss << "Content-Type: text/plain; charset=\"utf-8\"\r\n";
+    oss << "\r\n"; // koniec hlavičiek
+    oss << body << "\r\n";
+
+    std::string rawMessage = oss.str();
+
+    if (!sendViaGmailSmtp(gmailUser_, gmailAppPassword_, gmailUser_, mailingList_, rawMessage)) {
+        logging::err("[MailAlertManager] sendViaGmailSmtp failed.\n");
+    }
+}

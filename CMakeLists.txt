@@ -39,6 +39,7 @@ target_include_directories(monitor PRIVATE ${Python3_INCLUDE_DIRS} ${PROJECT_SOU
 target_link_libraries(monitor PRIVATE ${Python3_LIBRARIES})
 target_link_libraries(monitor PRIVATE yaml-cpp)
 target_link_libraries(monitor PRIVATE OpenSSL::Crypto)
+target_link_libraries(monitor PRIVATE OpenSSL::SSL)
 
 if(WIN32)
     target_link_libraries(monitor PRIVATE Shell32)
