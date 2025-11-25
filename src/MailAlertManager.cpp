@@ -68,7 +68,7 @@ static bool sslReadResponse(SSL* ssl) {
         return false;
     }
     buf[ret] = '\0';
-    logging::msg("[SMTP] " + std::string(buf));  // logni si odpoveď
+    logging::info("[SMTP] " + std::string(buf));  // logni si odpoveď
     return true;
 }
 
@@ -262,7 +262,29 @@ MailAlertManager::MailAlertManager(
 {
 }
 
-bool MailAlertManager::run(const std::string& incidentId, const std::string& msg)
+bool MailAlertManager::sendIncidentResolved(const std::string& incidentId, const std::string& msg)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    const auto now = Clock::now();
+
+    std::ostringstream subject;
+    subject << "[INFORMATION] Incident " << incidentId << " resolved";
+
+    std::ostringstream body;
+    auto now_time_t = Clock::to_time_t(now);
+
+    body << "Incident ID: " << incidentId << "\n";
+    body << "Time: " << std::ctime(&now_time_t);
+    body << "\nMessage:\n";
+    body << msg << "\n\n";
+
+    sendEmail(subject.str(), body.str());
+
+    return true;
+}
+
+bool MailAlertManager::sendIncidentReport(const std::string& incidentId, const std::string& msg)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -336,6 +358,11 @@ void MailAlertManager::resetAll()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     incidents_.clear();
+}
+
+bool MailAlertManager::isIncidentOngoing(const std::string &incidentId)
+{
+    return incidents_.contains(incidentId);
 }
 
 void MailAlertManager::sendEmail(const std::string& subject, const std::string& body)

@@ -82,3 +82,6 @@ mailing:
     # Default: 3600 (1h). Time, after which the limit counter for an incident
     # will get reset to 1
     reset: 3600
+    # Default: true. Whether or not an "Incident resolved" email will be sent
+    # when an incident is resolved
+    notifyresolved: true

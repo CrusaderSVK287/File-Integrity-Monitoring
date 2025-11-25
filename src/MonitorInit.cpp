@@ -212,6 +212,7 @@ bool Monitor::InitialiseMailing()
     uint32_t minInterval = Cfg.get<uint32_t>("mailing.spacing", 600); // minimal interval between emails
     uint32_t resetInterval = Cfg.get<uint32_t>("mailing.reset", 3600); // reset number of emails sent for a particular 
                                                                        // incident after a certain period of time
+    m_MailingNotifyWhenResolved = Cfg.get<bool>("mailing.notifyresolved", true); // send an email when incident resolved
     m_MailingManager = new MailAlertManager(
         mailList,
         maxEmails,

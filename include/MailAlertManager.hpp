@@ -28,11 +28,14 @@ public:
         std::string gmailAppPassword   // 16-znakový App Password
     );
 
-    bool run(const std::string& incidentId, const std::string& msg);
+    bool sendIncidentReport(const std::string& incidentId, const std::string& msg);
+    bool sendIncidentResolved(const std::string& incidentId, const std::string& msg);
 
     void markResolved(const std::string& incidentId);
 
     void resetAll();
+
+    bool isIncidentOngoing(const std::string &incidentId);
 
 private:
     std::vector<std::string> mailingList_;

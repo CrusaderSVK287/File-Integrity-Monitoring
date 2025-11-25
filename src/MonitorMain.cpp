@@ -52,11 +52,18 @@ int Monitor::RunScan()
         if (hashCompare != hashBaseline) {
             logging::warn("[Monitor] File " + file + " fingerprint does not match baseline, file may be compromised");
 
-            //TODO: call email plugin to raise alert
             if (m_MailingEnabled) {
-                m_MailingManager->run(filecode, "The computed fingerprint does not match an "
-                        "entry in one or more database. File on path '" + file + "' may be "
-                        "compromised, it is recommended to verify the integrity of the files\n");
+                m_MailingManager->sendIncidentReport(filecode, "The computed fingerprint does not match an "
+                        "entry in one or more database. \nFile on path '" + file + "' may be "
+                        "compromised,\nit is recommended to verify the integrity of the files\n");
+            }
+        } else {
+            // Handle resolved incidents
+            if (m_MailingEnabled && m_MailingManager->isIncidentOngoing(filecode)) {
+                if (m_MailingNotifyWhenResolved) {
+                    m_MailingManager->sendIncidentResolved(filecode, "The incident has been resolved, further action may not be necessary\n");
+                }
+                m_MailingManager->markResolved(filecode);
             }
         }
     }

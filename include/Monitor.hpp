@@ -18,7 +18,8 @@ class Monitor {
             Cfg(Config::getInstance()),
             m_hashAlgorhitm(nullptr),
             m_MailingManager(nullptr),
-            m_MailingEnabled(false)
+            m_MailingEnabled(false),
+            m_MailingNotifyWhenResolved(true)
         {}
 
         bool Initialise();
@@ -53,4 +54,5 @@ class Monitor {
         FilterMap m_filters;
         bool m_MailingEnabled;
         MailAlertManager *m_MailingManager;
+        bool m_MailingNotifyWhenResolved;
 };
