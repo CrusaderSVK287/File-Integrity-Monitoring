@@ -14,7 +14,6 @@
 #include <yaml-cpp/node/parse.h>
 #include <Config.hpp>
 #include <vector>
-#include <chrono>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -68,11 +67,10 @@ bool Monitor::Initialise()
 
 bool Monitor::InitialiseModules()
 {
-    py::dict _emptyParams;
-    bool result = Modules.LoadModule("_dbtest", _emptyParams);
-
-    //TODO: normalny mailing module pridat. 
-    //result = result & Modules.LoadModule("_mailtest", _emptyParams);
+    // Database module
+    py::dict databaseParams;
+    databaseParams[py::str("path")] = py::str(Cfg.get<std::string>("monitor.dbpath", "database.db"));
+    bool result = Modules.LoadModule("db", databaseParams);
 
     return result;
 }

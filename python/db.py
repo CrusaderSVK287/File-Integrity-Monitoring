@@ -55,8 +55,8 @@ def run(params):
         }
 
     DELETE ALL:
-        {   "action":
-            "delete_all" 
+        {   
+            "action":"delete_all" 
         }        
     """
 
@@ -95,7 +95,7 @@ def run(params):
             return {
                 "status": "OK",
                 "file": file,
-                "hash": row[0] if row else None
+                "hash": row[0] if row else "NULL"
             }
 
         # -------- DELETE ONE ---------

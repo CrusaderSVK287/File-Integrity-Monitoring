@@ -1,3 +1,5 @@
+#include "DatabaseInterface.hpp"
+#include "ModuleManager.hpp"
 #include <SecurityCLI.hpp>
 #include <SecurityManager.hpp>
 #include <Log.hpp>
@@ -9,6 +11,7 @@
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
 #include <PortabilityUtils.hpp>
+#include <pybind11/embed.h>
 
 #include <fstream>
 #include <string>
@@ -17,10 +20,12 @@
 
 namespace fs = std::filesystem;
 
-static const std::string _usage = "./monitor --security (encrypt/decrypt) (config/logs) | verify | help";
-
 static int FailWithUsage() {
-    logging::err("Incorrect usage. Please provide operation: " + _usage);
+    std::cerr << "Incorrect usage. Please provide operation: " << std::endl <<
+        "\t ./monitor --security pwd" << std::endl <<
+        "\t ./monitor --security encrypt config|logs" << std::endl <<
+        "\t ./monitor --security decrypt config|logs" << std::endl <<
+        "\t ./monitor --security reset database <path>" << std::endl;
     return 1;
 }
 
@@ -67,6 +72,11 @@ int SecurityCLI::Enter(const int argc, const char **argv)
             return DecryptLogs();
         else
              return FailWithUsage();
+    } else if (op == "reset") {
+        if (argc != 5) return FailWithUsage();
+        std::string sub = argv[3];
+        if (sub == "database") 
+            return ResetDatabase(argv[4]);
     } else {
         return FailWithUsage();
     }
@@ -265,6 +275,24 @@ int SecurityCLI::DecryptLogs() {
 }
 
 int SecurityCLI::Usage() {
+    return 0;
+}
+
+int SecurityCLI::ResetDatabase(std::string path) {
+    // REally ugly but works, I think this is better than changing workflow in main
+    py::scoped_interpreter guard{};
+    py::dict params;
+    params[py::str("path")] = py::str(path);
+    ModuleManager mm;
+    bool ok = mm.LoadModule(DatabaseInterface::moduleName , params);
+
+    if (!ok) {
+        std::cerr << "Failed to load database" << std::endl;
+        return 1;
+    }
+
+    DatabaseInterface::Query(mm, DatabaseInterface::Action::DELETEALL);
+
     return 0;
 }
 

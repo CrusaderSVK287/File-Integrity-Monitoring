@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 class SecurityCLI {
     public:
 
@@ -15,4 +17,5 @@ class SecurityCLI {
 
         int Usage();
         int GeneratePassword();
+        int ResetDatabase(std::string);
 };
