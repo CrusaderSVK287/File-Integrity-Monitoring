@@ -2,6 +2,17 @@
 #include <CryptoUtil.hpp>
 #include <PortabilityUtils.hpp>
 #include <Log.hpp>
+#include <cstdint>
+
+std::string hash8(const std::string& s) {
+    std::size_t h = std::hash<std::string>{}(s);
+
+    uint32_t short_hash = static_cast<uint32_t>(h);
+
+    std::stringstream ss;
+    ss << std::hex << std::setw(8) << std::setfill('0') << short_hash;
+    return ss.str();
+}
 
 extern volatile int _signal_Interrupt;
 
@@ -31,14 +42,29 @@ int Monitor::RunScan()
         std::string hashCompare = ComputeHash(file);
         logging::msg(hashCompare);
 
+        std::string filecode = hash8(file);
+
         // Retrieve a hash from database
         // TODO: finish when database plugin ready, store hash as basiline if doesnt exist
         py::dict result = QueryDatabase("SELECT hash FROM table WHERE key is whatever");
         std::string hashBaseline = result["hash"].cast<std::string>();
 
         if (hashCompare != hashBaseline) {
-            //TODO: call email plugin to raise alert
             logging::warn("[Monitor] File " + file + " fingerprint does not match baseline, file may be compromised");
+
+            if (m_MailingEnabled) {
+                m_MailingManager->sendIncidentReport(filecode, "The computed fingerprint does not match an "
+                        "entry in one or more database. \nFile on path '" + file + "' may be "
+                        "compromised,\nit is recommended to verify the integrity of the files\n");
+            }
+        } else {
+            // Handle resolved incidents
+            if (m_MailingEnabled && m_MailingManager->isIncidentOngoing(filecode)) {
+                if (m_MailingNotifyWhenResolved) {
+                    m_MailingManager->sendIncidentResolved(filecode, "The incident has been resolved, further action may not be necessary\n");
+                }
+                m_MailingManager->markResolved(filecode);
+            }
         }
     }
 
@@ -47,7 +73,6 @@ int Monitor::RunScan()
 
 std::string Monitor::ComputeHash(const std::string &filename)
 {
-    // TODO: refactor, fuck out the func pointer do some stupid classes or whatever with method overrides
     return m_hashAlgorhitm->Run(filename, m_filters);
 }
 

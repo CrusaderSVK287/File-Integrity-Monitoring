@@ -60,3 +60,28 @@ filter:
     # When false, its evaluated like this: "<p></p> <p>Jane</>"
     # When true, its evaluated like this: "<p></p> <p></>"
     all: false
+
+# Configuration for mailing manager. This entire section is optional,
+# however, if this section is used, there are some mandatory fields
+mailing:
+    # Mandatory: Determines whether the mailing is enabled or not
+    enable: true
+    # Mandatory: User email from which the emails will be sent
+    user: "username"
+    # Mandatory: password for the user email
+    password: "password"
+    # Mandatory: Mailing list of adresses to which the email will be sent.
+    # At least one address must be provided
+    list:
+      - tmp@mail.com
+    # Default: 3. Number of emails sent per incident 
+    # before the reports will stop coming until the next reset
+    limit: 3
+    # Default: 600 (10m). Minimal period between each email in seconds
+    spacing: 600
+    # Default: 3600 (1h). Time, after which the limit counter for an incident
+    # will get reset to 1
+    reset: 3600
+    # Default: true. Whether or not an "Incident resolved" email will be sent
+    # when an incident is resolved
+    notifyresolved: true

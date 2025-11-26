@@ -1,5 +1,6 @@
 #pragma once
 
+#include <MailAlertManager.hpp>
 #include <HashingAlgorithm.hpp>
 #include <SecurityManager.hpp>
 #include <pybind11/embed.h>
@@ -15,7 +16,10 @@ class Monitor {
             Security(SecurityManager::getInstance()),
             Modules(ModuleManager()),
             Cfg(Config::getInstance()),
-            m_hashAlgorhitm(nullptr)
+            m_hashAlgorhitm(nullptr),
+            m_MailingManager(nullptr),
+            m_MailingEnabled(false),
+            m_MailingNotifyWhenResolved(true)
         {}
 
         bool Initialise();
@@ -29,6 +33,7 @@ class Monitor {
         bool InitialiseModules(); 
         bool InitialiseConfig(); // for stuff like time period between checks etc
         bool InitialiseFilters();
+        bool InitialiseMailing();
         std::string ComputeHash(const std::string &s);    // Algorhitm agnostic method that calls m_hashAlgorhitm with algorhitm set up in config
 
         int RunScan();
@@ -47,4 +52,7 @@ class Monitor {
         std::vector<std::string> m_files;       // Filenames to be monitored
         HashingAlgorithm *m_hashAlgorhitm;           // Pointer to the function used for checksumming the files
         FilterMap m_filters;
+        bool m_MailingEnabled;
+        MailAlertManager *m_MailingManager;
+        bool m_MailingNotifyWhenResolved;
 };
