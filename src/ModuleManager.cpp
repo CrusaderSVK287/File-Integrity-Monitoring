@@ -2,7 +2,6 @@
 #include <Log.hpp>
 
 #include <pybind11/embed.h>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <map>
@@ -41,7 +40,7 @@ bool ModuleManager::LoadModule(const std::string &name, const py::dict &params)
 
 py::dict ModuleManager::RunModule(const std::string &name, const py::dict &params)
 {
-    logging::msg("[ModuleManager] Running python module " + name);
+    logging::info("[ModuleManager] Running python module " + name);
     auto it = m_mModules.find(name);
     if (it == m_mModules.end()) {
         throw std::runtime_error("Module '" + name + "' not found, cannot run");

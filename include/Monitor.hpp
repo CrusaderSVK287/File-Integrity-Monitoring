@@ -38,8 +38,6 @@ class Monitor {
 
         int RunScan();
 
-        py::dict QueryDatabase(const std::string &query);
-
     private:
         // Managers
         ModuleManager Modules;

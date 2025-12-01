@@ -15,6 +15,9 @@ monitor:
   # Key lenght used in hashing algorhitm. 
   # Default value 256. Supported: 256, 512
   key_length: 256
+  # Default value "database.db". Path, where the database file is located
+  # or should be created if it does not already exist
+  dbpath: "database.db"
   # Logging setup
   log:
     # Default false. Logs wont show on screen at all.
