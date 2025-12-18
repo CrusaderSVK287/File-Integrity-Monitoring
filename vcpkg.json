@@ -1,0 +1,10 @@
+{
+  "name": "myapp",
+  "version": "0.1.0",
+  "dependencies": [
+    "openssl",
+    "yaml-cpp",
+    "pybind11"
+  ]
+}
+
