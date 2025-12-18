@@ -4,9 +4,9 @@ name: CMake on multiple platforms
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -28,16 +28,23 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
           sudo apt-get install -y \
-            git \
+            g++-13 \
+            gcc-13 \
             cmake \
             make \
-            g++ \
+            git \
             python3 \
             python3-dev \
             libssl-dev \
             libyaml-cpp-dev \
             pybind11-dev
+          # Set GCC 13 / G++ 13 as default
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
 
       # ------------------------
       # Windows dependencies (vcpkg)
@@ -55,6 +62,8 @@ jobs:
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_CXX_STANDARD=23
+          -DCMAKE_CXX_STANDARD_REQUIRED=ON
           ${{ runner.os == 'Windows' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', env.VCPKG_ROOT) || '' }}
 
       # ------------------------
