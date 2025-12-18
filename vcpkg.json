@@ -6,6 +6,6 @@
     "yaml-cpp",
     "pybind11"
   ],
-  "vcpkg-commit": "2c953609a0d500988150766b83ef8dbdfbbe9956"
+  "builtin-baseline": "2c953609a0d500988150766b83ef8dbdfbbe9956"
 }
 
