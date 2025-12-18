@@ -1,0 +1,11 @@
+{
+  "name": "myapp",
+  "version": "0.1.0",
+  "dependencies": [
+    "openssl",
+    "yaml-cpp",
+    "pybind11"
+  ],
+  "builtin-baseline": "2c953609a0d500988150766b83ef8dbdfbbe9956"
+}
+

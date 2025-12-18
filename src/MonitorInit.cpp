@@ -90,7 +90,11 @@ static void FilterLinesPopulateSet(std::unordered_set<uint64_t> &set, const std:
                 std::istringstream iss(token);
                 if (iss >> lower >> dash >> upper && dash == '-' && lower < upper) {
                     // range string is valid
-                    set.insert_range(std::views::iota(lower, upper + 1));
+                    // Replaced this line with the line below because libc++ that CI uses doesnt 
+                    // have it yet. It will most likely be forgotten lol
+                    //set.insert_range(std::views::iota(lower, upper + 1));
+                    set.insert( std::views::iota(lower, upper + 1).begin(),
+                                std::views::iota(lower, upper + 1).end());
                 } else {
                     // in case user is incapable of understanding child-like syntax
                     throw std::invalid_argument("Invalid format for filter range [" + token + "]. Use correct format [lower-upper]");
